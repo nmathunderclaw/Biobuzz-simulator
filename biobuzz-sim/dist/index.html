@@ -232,6 +232,7 @@ kbd { font-family: var(--f-mono); font-size: 11px; padding: 0 4px; border: 1px s
 .seg-slots button.on.blue { background: var(--blue); color: #fff; }
 .seg-wrap { flex-wrap: wrap; } .seg-wrap button { flex: 1 1 30%; }
 .seg-sm button { padding: 4px 8px; font-size: 12px; }
+.srow .seg { flex-wrap: wrap; min-width: 0; } .srow .seg button { flex: 1 1 auto; }   /* longer (English) labels wrap onto a second line instead of spilling out of the box */
 .select, .input { width: 100%; background: #10171d; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; color: var(--ink); font-size: 14px; }
 .input.mono { font-family: var(--f-mono); font-size: 13px; }
 input[type=range] { width: 100%; accent-color: var(--honey); }
@@ -305,7 +306,7 @@ input[type=range] { width: 100%; accent-color: var(--honey); }
 .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 7px 12px; font-weight: 600; color: var(--ink-2); margin-bottom: -1px; }
 .tabs button.on { color: var(--honey-2); border-bottom-color: var(--honey); }
 .tab-body { display: grid; gap: 12px; }
-.srow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 320px); gap: 16px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.srow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 400px); gap: 16px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .srow .sl b { display: block; font-weight: 600; }
 .srow .sl span { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
 .remap { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -7212,6 +7213,7 @@ const SET_ROWS = {
     { k: 'rumble', b: 'Rung tay cầm', s: 'Khi bắn, va chạm, HIVE TIP (Chrome, Edge).', opts: [[true, 'Bật'], [false, 'Tắt']] },
   ],
   view: [
+    { k: 'lang', b: 'Ngôn ngữ', s: 'Chọn ngôn ngữ giao diện. Phần chưa dịch sẽ giữ nguyên tiếng Việt.', opts: [['vi', 'Tiếng Việt'], ['en', 'English']] },
     { k: 'cam', b: 'Góc nhìn mặc định', s: 'Đổi trong trận bằng C hoặc 1–5.', opts: [['driver', 'Khu lái'], ['follow', 'Theo robot'], ['broadcast', 'Khán đài'], ['top', 'Từ trên'], ['pov', 'Camera robot']] },
     { k: 'camAdjRow', b: 'Chỉnh góc camera', s: 'Trong trận kéo chuột trái để xoay, Shift + kéo (hoặc chuột phải) để dời, lăn chuột để thu phóng, nhấp đúp để đặt lại; hoặc Tạm dừng → “Chỉnh góc camera này” (dùng được cả phím và tay cầm). Mỗi góc nhìn nhớ riêng.', button: ['camResetAll', 'Đặt lại mọi góc'] },
     { k: 'fov', b: 'Góc nhìn rộng (FOV)', s: 'Độ mở ống kính cho mọi góc nhìn trừ camera robot. Mặc định 50°.', range: [36, 80, 1], unit: '°' },
@@ -7265,6 +7267,7 @@ UI.applySetting = function (k) {
   if (k === 'vol' || k === 'sfx' || k === 'voice') { AU.unlock(); AU.setLevels(set.vol, set.sfx, set.voice); if (k !== 'voice') AU.sfxs.shot(0.6); }
   if (k === 'autoRes') { R.dyn.on = set.autoRes !== false; R.dyn.scale = 1; if (R.size) R.resize(R.size.w, R.size.h); }
   if (k === 'fov') R.view.fov = set.fov;
+  if (k === 'lang' && window.BBI18N) window.BBI18N.set(set.lang);
   if (k === 'kbDrive') { IN.keys.clear(); if (S().padNotice) S().padNotice(); UI.duoDevices(); }
 };
 UI.settingsReset = function () {
@@ -8644,7 +8647,7 @@ const DEF = {
   kbDrive: false, kbTurn: 0.6, kbRamp: true,
   keys: clone(IN.DEFAULT_KEYS), pad: clone(IN.DEFAULT_PAD),
   cam: 'driver', quality: ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4 || matchMedia('(pointer: coarse)').matches) ? 'low' : 'high', autoRes: true, fov: 50, camAdj: {}, fx: 'on', fps: false, arc: true, aimMap: false, legend: true, tips: true, labels: true,
-  vol: 0.8, sfx: 0.8, voice: true,
+  vol: 0.8, sfx: 0.8, voice: true, lang: (window.BBI18N && window.BBI18N.lang) || 'vi',
   olName: '', olMode: 'versus', olBots: 'normal', olRobot: 'turret', olAuto: 'full',
   autoSel: '', played: 0,
 };
@@ -9372,6 +9375,381 @@ function swapInCad() {
 })();
 })();
 
+</script>
+<script>
+/* BIOBUZZ i18n: Vietnamese is the source language; English is applied by translating the DOM (static + dynamic text).
+   Add more pairs to EN below ("Tiếng Việt": "English"); anything missing simply stays Vietnamese. */
+(function () {
+  var KEY = 'biobuzz-sim-v2', lang = 'vi';
+  try { var s0 = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s0 && s0.lang === 'en') lang = 'en'; } catch (e) {}
+  var EN = {
+    "NECTAR ĐỎ · KHÓA": "RED NECTAR · LOCKED",
+    "NECTAR XANH · KHÓA": "BLUE NECTAR · LOCKED",
+    "ẨN GIAO DIỆN": "HIDE UI",
+    "mở lúc 1:00": "opens at 1:00",
+    "vào chắc": "sure shot",
+    "hên xui": "risky",
+    "trượt ·": "miss ·",
+    "bắn đứng yên, không tính bóng dội vào": "standing shots only, no bounce-ins counted",
+    "Chưa thấy tay cầm: cắm vào rồi bấm một nút bất kỳ để lái.": "No controller found: plug one in and press any button to drive.",
+    "Lái bằng bàn phím": "Drive with keyboard",
+    "Đối thủ 1": "Opponent 1",
+    "Đối thủ 2": "Opponent 2",
+    "AUTO của đối thủ 1": "Opponent 1's AUTO",
+    "AUTO của đối thủ 2": "Opponent 2's AUTO",
+    "Số đội": "Team number",
+    "Tự động": "Automatic",
+    "Tự bấm": "Manual",
+    "Trọng tài": "Referee",
+    "Thổi phạt": "Call fouls",
+    "POLLEN để lật CELL rỗng:": "POLLEN to flip an empty CELL:",
+    "Vào trận": "Start match",
+    "Quay lại": "Back",
+    "ĐỎ": "RED",
+    "XANH": "BLUE",
+    "Đồng hồ": "Clock",
+    "Không giới hạn": "Unlimited",
+    "Đủ 2:38": "Full 2:38",
+    "Mở ngay": "Open now",
+    "Theo luật (1:00)": "By the rules (1:00)",
+    "Người cản": "Defender",
+    "Không": "None",
+    "Bot phòng thủ": "Defense bot",
+    "POLLEN để lật:": "POLLEN to flip:",
+    "Bấm": "Press",
+    "Vào sân": "Enter field",
+    "Hai người · một máy": "Two players · one screen",
+    "Kiểu chơi": "Play mode",
+    "Đối đầu (mỗi người một liên minh)": "Versus (one alliance each)",
+    "Cùng đội": "Same team",
+    "Chung robot: lái + điều khiển": "Shared robot: drive + operate",
+    "Người 1 dùng": "Player 1 uses",
+    "Tay cầm 1": "Controller 1",
+    "Tay cầm 2": "Controller 2",
+    "Phím trái": "Left keys",
+    "Người 2 dùng": "Player 2 uses",
+    "Phím phải": "Right keys",
+    "Robot người 1": "Player 1's robot",
+    "Robot người 2": "Player 2's robot",
+    "Bot còn lại": "Remaining bots",
+    "Không có": "None",
+    "AUTO người 1": "Player 1's AUTO",
+    "AUTO người 2": "Player 2's AUTO",
+    "AUTO của các bot": "Bots' AUTO",
+    "Tên hiển thị": "Display name",
+    "Kiểu trận (chủ phòng chọn)": "Match type (host picks)",
+    "Đối đầu": "Versus",
+    "Bot thêm vào (chủ phòng chọn)": "Added bots (host picks)",
+    "Tạo phòng": "Create room",
+    "Hoặc vào phòng bằng mã": "Or join a room by code",
+    "Vào phòng": "Join room",
+    "Phòng": "Room",
+    "Chép mã": "Copy code",
+    "đang kết nối…": "connecting…",
+    "Bắt đầu trận": "Start match",
+    "Rời phòng": "Leave room",
+    "kéo để xoay · cuộn để phóng": "drag to rotate · scroll to zoom",
+    "Robot mới": "New robot",
+    "Nhân bản": "Duplicate",
+    "Chép mã chia sẻ": "Copy share code",
+    "Thử trong luyện tập": "Try in practice",
+    "Xóa": "Delete",
+    "Xóa robot này?": "Delete this robot?",
+    "Giữ lại": "Keep",
+    "Dán mã chia sẻ": "Paste share code",
+    "Nhập": "Import",
+    "Chạy thử": "Test run",
+    "Tức thì": "Instant",
+    "Bản đồ bắn": "Shot map",
+    "Chương trình": "Program",
+    "Mới": "New",
+    "Xóa chương trình này?": "Delete this program?",
+    "Tên": "Name",
+    "Robot chạy thử": "Test robot",
+    "Xuất phát · chạm tường, ngoài LOADING ZONE (G304)": "Start · touching wall, outside LOADING ZONE (G304)",
+    "Tường khán đài": "Audience wall",
+    "Tường phía xa": "Far wall",
+    "Nhìn vào sân": "Face the field",
+    "Xoay trái 90°": "Turn left 90°",
+    "Xoay phải 90°": "Turn right 90°",
+    "Quay lưng": "Turn around",
+    "Thêm bước": "Add step",
+    "Đi tới": "Drive to",
+    "Bắn": "Shoot",
+    "Nhặt bóng": "Pick up ball",
+    "Chờ": "Wait",
+    "Chờ tới giây": "Wait until second",
+    "Mã chia sẻ chương trình": "Program share code",
+    "Gán chương trình này cho robot khác trong trận": "Assign this program to other robots in the match",
+    "Bot đồng đội": "Partner bot",
+    "Các bot (chế độ 2 người)": "Bots (2-player mode)",
+    "Gán": "Assign",
+    "Dùng cho trận của tôi": "Use in my match",
+    "Thử trong trận": "Try in match",
+    "Gán phím &amp; tay cầm": "Key & controller bindings",
+    "Cách chơi BIOBUZZ": "How to play BIOBUZZ",
+    "Thành tích": "Achievements",
+    "LEAVE: không chạm tường sân khi hết AUTO": "LEAVE: not touching the field wall at end of AUTO",
+    "PARK: một phần trong LOADING ZONE": "PARK: partly inside the LOADING ZONE",
+    "POLLEN/NECTAR còn trong CELL cuối trận": "POLLEN/NECTAR still in CELLs at match end",
+    "Bottom NECTAR Bonus (mỗi FLOWER)": "Bottom NECTAR Bonus (per FLOWER)",
+    "POLLEN/NECTAR trong FLOWER mình sở hữu": "POLLEN/NECTAR in FLOWERs you own",
+    "Lỗi MINOR / MAJOR của đối thủ": "Opponent's MINOR / MAJOR fouls",
+    "Robot giữ tối đa 4 bóng (G407) và không được giữ NECTAR của đối thủ (G408).": "A robot holds at most 4 balls (G407) and may not hold opponent NECTAR (G408).",
+    "RP: thắng 3, hòa 1. SWARM khi LEAVE + PARK ≥ 16. POLLINATOR khi ≥ 4 và ≥ 7 TIP.": "RP: win 3, tie 1. SWARM when LEAVE + PARK ≥ 16. POLLINATOR at ≥ 4 and ≥ 7 TIP.",
+    "Ngắm bằng AprilTag": "Aiming with AprilTag",
+    "Xem lại và phân tích": "Replay and analysis",
+    "Xem lại 10 giây vừa rồi": "Replay the last 10 seconds",
+    "Xem lại trận": "Match replay",
+    "Diễn biến trận": "Match timeline",
+    "Bản đồ sân": "Field map",
+    "Chiến thuật AUTO của đội bạn": "Your team’s AUTO strategy",
+    "Góc camera": "Camera angle",
+    "Chỉnh góc camera này": "Adjust this camera angle",
+    "Điều khiển mặc định": "Default controls",
+    "Độ chính xác của mô phỏng": "Simulation accuracy",
+    "Tạm dừng": "Pause",
+    "KHỞI ĐẦU": "START",
+    "THÁP PHÁO": "TURRET",
+    "SONG PHÁO": "TWIN SHOOTER",
+    "TỐC ĐỘ": "SPEED",
+    "CÁNH TAY FLOWER": "FLOWER ARM",
+    "Arm dài cắm FLOWER 0,4 s, flap rút POLLEN đáy. Súng lob bánh 72 mm.": "Long arm plugs into FLOWER in 0.4 s, flap pulls bottom POLLEN. 72 mm wheel lob shooter.",
+    "PHÒNG THỦ": "DEFENSE",
+    "CHỜ": "WAIT",
+    "NECTAR vào FLOWER trước 1:00": "NECTAR into FLOWER before 1:00",
+    "G409: chạm bóng rơi từ HIVE vừa TIP (cảnh cáo)": "G409: touching a ball dropped from a just-tipped HIVE (warning)",
+    "HIVE ĐANG LẬT": "HIVE TIPPING",
+    "KHÔNG THẤY TAG": "NO TAG VISIBLE",
+    "QUÁ GẦN": "TOO CLOSE",
+    "NGOÀI TẦM": "OUT OF RANGE",
+    "QUÁ XA": "TOO FAR",
+    "KHÔNG CÓ ĐƯỜNG BẮN": "NO SHOT PATH",
+    "GIỚI HẠN TURRET": "TURRET LIMIT",
+    "ĐANG NGẮM": "AIMING",
+    "CHỜ ỔN ĐỊNH": "SETTLING",
+    "HẾT BÓNG": "OUT OF BALLS",
+    "Human player đưa NECTAR vào sớm": "Human player fed NECTAR in early",
+    "Cản trở AUTO của đối thủ bên phần sân của họ": "Interfering with the opponent's AUTO on their side",
+    "Giữ chặn (PIN) quá 3 giây": "Pinning for over 3 seconds",
+    "Tiếp tục PIN thêm 3 giây": "Pinning for another 3 seconds",
+    "CHUYỂN TIẾP": "TRANSITION",
+    "LUYỆN TẬP": "PRACTICE",
+    "KẾT THÚC": "FINISHED",
+    "Mã không chứa chương trình AUTO.": "This code contains no AUTO program.",
+    "Mã AUTO phải bắt đầu bằng BBA1.": "AUTO code must start with BBA1.",
+    "Mã bị cắt thiếu hoặc sai.": "The code is truncated or invalid.",
+    "Vị trí xuất phát chạm LOADING ZONE (G304 không cho phép).": "Start position touches the LOADING ZONE (not allowed by G304).",
+    "Vị trí xuất phát đè lên FLOWER.": "Start position overlaps a FLOWER.",
+    "Chưa có bước Bắn: 4 POLLEN preload sẽ nằm yên trong robot.": "No Shoot step yet: the 4 preloaded POLLEN will stay in the robot.",
+    "tới nơi": "arrived",
+    "robot đang đầy 4 bóng, không nhặt thêm được": "robot is full with 4 balls, cannot pick up more",
+    "Lái tới": "Drive forward",
+    "Lái lùi": "Drive back",
+    "Lái sang trái": "Strafe left",
+    "Lái sang phải": "Strafe right",
+    "Chạy chậm (ngắm tinh)": "Slow drive (fine aim)",
+    "Lái theo sân / theo robot": "Field / robot-centric drive",
+    "Bắn (khi đã khóa)": "Shoot (when locked)",
+    "Bắn ngay (bỏ qua khóa)": "Shoot now (ignore lock)",
+    "Nhả bóng": "Release balls",
+    "Cánh tay FLOWER": "FLOWER arm",
+    "Khóa turret (tự chỉnh tay)": "Lock turret (manual adjust)",
+    "Turret sang trái": "Turret left",
+    "Turret sang phải": "Turret right",
+    "Human player đưa NECTAR": "Human player feeds NECTAR",
+    "Bảng chi tiết (giữ)": "Details panel (hold)",
+    "Đổi góc nhìn": "Change camera",
+    "Góc nhìn: khu lái": "View: driver station",
+    "Góc nhìn: theo robot": "View: follow robot",
+    "Góc nhìn: khán đài": "View: grandstand",
+    "Góc nhìn: từ trên": "View: top-down",
+    "Góc nhìn: camera robot": "View: robot camera",
+    "Đặt lại thu phóng": "Reset zoom",
+    "Ẩn giao diện": "Hide UI",
+    "Xếp lại sân (luyện tập)": "Reset field (practice)",
+    "Shift trái": "Left Shift",
+    "Shift phải": "Right Shift",
+    "Ctrl trái": "Left Ctrl",
+    "Ctrl phải": "Right Ctrl",
+    "Tự do": "Free",
+    "LỖI": "ERROR",
+    "Phát": "Play",
+    "Chưa đủ dữ liệu": "Not enough data yet",
+    "KHÁN ĐÀI": "GRANDSTAND",
+    "ĐANG BÁM": "TRACKING",
+    "Xa · trái": "Far · left",
+    "Phải · xa": "Right · far",
+    "Gần · phải": "Near · right",
+    "Trái · gần": "Left · near",
+    "lái ·": "drive ·",
+    "cần trái lái · cần phải xoay": "left stick drives · right stick turns",
+    "HỢP LỆ FTC": "FTC LEGAL",
+    "VƯỢT GIỚI HẠN": "OVER LIMIT",
+    "TRỐNG": "EMPTY",
+    "SÚNG CỐ ĐỊNH": "FIXED SHOOTER",
+    "KHÓA MỤC TIÊU": "TARGET LOCKED",
+    "TRÁI": "LEFT",
+    "PHẢI": "RIGHT",
+    "NGOÀI LOADING ZONE": "OUTSIDE LOADING ZONE",
+    "TRONG VÙNG BẮN": "IN SHOOTING ZONE",
+    "NGOÀI VÙNG BẮN": "OUT OF SHOOTING ZONE",
+    "KHÔNG CÓ NECTAR": "NO NECTAR",
+    "ĐẦY 4/4": "FULL 4/4",
+    "NHẢ BÓNG": "RELEASING",
+    "INTAKE TẮT": "INTAKE OFF",
+    "TỰ BẮN KHI KHÓA": "AUTO-FIRE ON LOCK",
+    "BẮN TAY": "MANUAL FIRE",
+    "TURRET CHỈNH TAY": "MANUAL TURRET",
+    "TURRET TỰ BÁM": "AUTO TURRET",
+    "LÁI THEO SÂN": "FIELD-CENTRIC",
+    "LÁI THEO ROBOT": "ROBOT-CENTRIC",
+    "CHẬM": "SLOW",
+    "phía khán đài": "audience side",
+    "tag CELL khác": "other CELL tag",
+    "không thấy tag": "no tag visible",
+    "đang tính…": "calculating…",
+    "bắn đứng yên từ ô đó, chưa tính bóng dội vào": "standing shot from that tile, bounce-ins not counted",
+    "HIỆN GIAO DIỆN": "SHOW UI",
+    "KHU LÁI": "DRIVER STATION",
+    "NHÌN TỪ TRÊN": "TOP-DOWN VIEW",
+    "TỰ DO": "FREE",
+    "· GÓC ĐÃ CHỈNH (NHẤP ĐÚP ĐỂ ĐẶT LẠI)": "· ANGLE ADJUSTED (DOUBLE-CLICK TO RESET)",
+    "đang tính điểm": "scoring",
+    "TRẬN ĐẦU? VÀI ĐIỀU NÊN BIẾT": "FIRST MATCH? A FEW THINGS TO KNOW",
+    "Tay cầm dùng được ngay: cắm vào rồi bấm một nút.": "Controllers work right away: plug in and press a button.",
+    "Cài đặt → Điều khiển: intake giữ/bật tắt, gán lại mọi phím và nút.": "Settings → Controls: intake hold/toggle, remap every key and button.",
+    "turret tự quay": "turret turns by itself",
+    "robot tự xoay theo tag": "robot turns to the tag by itself",
+    "Bóng trong CELL": "Balls in CELLs",
+    "FLOWER sở hữu": "Owned FLOWERs",
+    "Lỗi của đối thủ": "Opponent's fouls",
+    "Điểm nếu dừng lúc này": "Score if stopped now",
+    "Tổng": "Total",
+    "Số TIP · SWARM": "TIP count · SWARM",
+    "Đội": "Team",
+    "Bóng": "Balls",
+    "Vào/bắn": "In/shot",
+    "Lệch": "Offset",
+    "Chưa có lỗi.": "No fouls yet.",
+    "CELL ngửa": "Open CELL",
+    "Tới TIP": "To TIP",
+    "ĐỎ THẮNG": "RED WINS",
+    "XANH THẮNG": "BLUE WINS",
+    "HÒA": "TIE",
+    "Bóng còn trong CELL": "Balls left in CELLs",
+    "KHÁC": "OTHER",
+    "Hạng mục": "Category",
+    "Tổng điểm": "Total score",
+    "Số TIP": "TIP count",
+    "Quãng": "Span",
+    "Hết AUTO": "End of AUTO",
+    "điểm tạm tính lúc 0:00 AUTO": "provisional score at 0:00 AUTO",
+    "Dẫn xa nhất": "Biggest lead",
+    "ĐỎ · XANH": "RED · BLUE",
+    "Đổi bên dẫn": "Lead changes",
+    "lần trong trận": "times in the match",
+    "TIP đầu tiên": "First TIP",
+    "Gần < 4 ft": "Close < 4 ft",
+    "Vừa 4–7 ft": "Medium 4–7 ft",
+    "Vào / bắn": "In / shot",
+    "Quãng đường": "Distance",
+    "Ở nửa sân mình": "On own half",
+    "Tỉ lệ vào theo cự ly tới HIVE": "Make rate by distance to HIVE",
+    "đứng nhiều": "time spent",
+    "bắn vào": "shots made",
+    "Theo robot": "Follow robot",
+    'Đấu trận': 'Match', 'Bạn + bot đồng đội, đấu 2 bot': 'You + a bot partner vs 2 bots',
+    'Luyện tập': 'Practice', 'Một mình trên sân, xếp lại bất cứ lúc nào': 'Solo on the field, reset anytime',
+    'Hai người': 'Two players', 'Chung một máy: đối đầu, cùng đội, lái + điều khiển': 'One screen: versus, co-op, drive + operate',
+    'Chơi online': 'Play online', 'Hai máy, một phòng: đối đầu hoặc cùng đội': 'Two devices, one room: versus or co-op',
+    'Xưởng robot': 'Robot workshop', 'Thiết kế robot, xem 3D, mã chia sẻ': 'Design robots, 3D preview, share codes',
+    'Chiến thuật AUTO': 'AUTO strategy', 'Tự lập trình 30 giây AUTO, chạy thử ngay': 'Program your own 30-second AUTO and test it right away',
+    'Cài đặt': 'Settings', 'Điều khiển, gán phím, hiển thị, âm thanh': 'Controls, key bindings, display, sound',
+    'Cách chơi': 'How to play', 'Luật BIOBUZZ và điểm số': 'BIOBUZZ rules and scoring',
+    'Kiểm tra tay cầm': 'Controller test', 'Xem cần, cò, nút theo thời gian thực': 'See sticks, triggers and buttons live',
+    'Độ chính xác': 'Accuracy', 'Mô phỏng gì, lấy số liệu từ đâu': 'What is simulated and where the data comes from',
+    'Chưa có tay cầm': 'No controller', 'Vào trận nhanh': 'Quick match', 'Tùy chỉnh trận': 'Customize match',
+    'Robot của bạn': 'Your robot', 'Vị trí': 'Position', 'ĐỎ 1': 'RED 1', 'ĐỎ 2': 'RED 2', 'XANH 1': 'BLUE 1', 'XANH 2': 'BLUE 2',
+    'Điểm xuất phát (G304)': 'Start position (G304)', 'Gần khán đài': 'Near audience', 'Tường liên minh': 'Alliance wall', 'Phía xa': 'Far side',
+    'AUTO của bạn': 'Your AUTO', 'AUTO của bot đồng đội': "Partner bot's AUTO", 'Bot AI': 'AI bots', 'Dễ': 'Easy', 'Vừa': 'Normal', 'Khó': 'Hard', 'Đồng đội': 'Partner',
+    'Soạn chiến thuật AUTO riêng →': 'Write your own AUTO strategy →',
+    /* settings */
+    'Điều khiển': 'Controls', 'Gán phím & tay cầm': 'Key & controller bindings', 'Hiển thị': 'Display', 'Âm thanh': 'Sound',
+    'Khôi phục mặc định': 'Restore defaults', 'Xong': 'Done', 'Đã đặt lại': 'Reset done',
+    'Bật': 'On', 'Tắt': 'Off', 'Hiện': 'Show', 'Ẩn': 'Hide',
+    'Ngôn ngữ': 'Language', 'Chọn ngôn ngữ giao diện. Phần chưa dịch sẽ giữ nguyên tiếng Việt.': 'Interface language. Parts not yet translated stay in Vietnamese.',
+    'Lái robot bằng bàn phím': 'Drive the robot with the keyboard',
+    'Tốc độ xoay bằng phím': 'Keyboard turn speed', 'Phím chỉ có bật/tắt nên xoay toàn lực rất khó ngắm; mặc định 60% công suất xoay.': 'Keys are on/off only, so full-power turning is hard to aim; defaults to 60% turn power.',
+    'Tăng tốc mượt khi lái bằng phím': 'Smooth keyboard acceleration', 'Nhấn phím là cần “đẩy” dần lên trong 0,16 s thay vì giật ngay 100%; nhả là dừng nhanh.': 'Pressing a key ramps the stick up over 0.16 s instead of jumping to 100%; releasing stops fast.',
+    'Intake': 'Intake', 'Luôn chạy (tự dừng khi đủ 4 bóng), giữ nút để chạy, hoặc bấm để bật/tắt.': 'Always on (stops at 4 balls), hold to run, or press to toggle.',
+    'Luôn chạy': 'Always on', 'Giữ': 'Hold', 'Bật/tắt': 'Toggle',
+    'Kiểu lái mặc định': 'Default drive style', 'Theo sân': 'Field-centric', 'Theo robot@driveMode': 'Robot-centric',
+    'Theo sân: đẩy cần lên là robot chạy ra xa bạn. Theo robot: lên là tiến theo đầu robot.': 'Field-centric: push the stick up and the robot moves away from you. Robot-centric: up is forward along the robot’s nose.',
+    'Tự căn tag (súng cố định)': 'Auto-align to tag (fixed shooter)', 'Tốc độ turret': 'Turret speed', 'Chuẩn': 'Standard', 'Nhanh': 'Fast',
+    'Nhanh gấp 4 lần: như servo tốc độ cao, dễ vượt lố hơn.': '4× faster: like a high-speed servo, easier to overshoot.',
+    'Tự bắn khi khóa (mặc định)': 'Auto-fire on lock (default)', 'Có thể bật/tắt trong trận bằng nút Tự bắn.': 'Can be toggled during the match with the Auto-fire button.',
+    'Độ nhạy cần': 'Stick sensitivity', 'Tuyến tính': 'Linear', 'Bình phương': 'Squared', 'Lập phương': 'Cubic',
+    'Bình phương hoặc lập phương cho điều khiển tinh ở tốc độ thấp.': 'Squared or cubic gives finer control at low speed.',
+    'Vùng chết cần': 'Stick deadzone', 'Tăng lên nếu robot tự trôi khi không chạm cần.': 'Increase it if the robot drifts when you are not touching the stick.',
+    'Rung tay cầm': 'Controller rumble', 'Khi bắn, va chạm, HIVE TIP (Chrome, Edge).': 'On shots, collisions, HIVE TIP (Chrome, Edge).',
+    'Góc nhìn mặc định': 'Default camera', 'Đổi trong trận bằng C hoặc 1–5.': 'Switch in a match with C or 1–5.',
+    'Khu lái': 'Driver station', 'Khán đài': 'Grandstand', 'Từ trên': 'Top-down', 'Camera robot': 'Robot camera',
+    'Chỉnh góc camera': 'Adjust camera angle', 'Góc nhìn rộng (FOV)': 'Field of view (FOV)',
+    'Độ mở ống kính cho mọi góc nhìn trừ camera robot. Mặc định 50°.': 'Lens angle for every view except the robot camera. Default 50°.',
+    'Đồ họa': 'Graphics', 'Tự giảm độ phân giải khi giật': 'Auto-lower resolution when laggy',
+    'Hiệu ứng': 'Effects', 'Tia lửa khi bóng vào CELL, bùng nổ khi HIVE TIP, vệt bóng bay, pháo giấy cuối trận.': 'Sparks when a ball enters a CELL, burst on HIVE TIP, ball trails, end-of-match confetti.',
+    'Quỹ đạo dự đoán': 'Predicted trajectory', 'Đường nét đứt: bóng sẽ bay thế nào nếu bắn ngay lúc này.': 'Dashed line: how the ball would fly if you shot right now.',
+    'Bản đồ ngắm lúc vào trận': 'Aim map at match start', 'Tô màu sàn theo xác suất vào CELL đang ngửa.': 'Colors the floor by the chance of scoring in the open CELL.',
+    'Số đội trên robot': 'Team numbers on robots', 'Dải phím tắt': 'Shortcut bar', 'Gợi ý trận đầu': 'First-match tips',
+    'Hộp hướng dẫn trong 3 trận đầu tiên.': 'Guide box during your first 3 matches.',
+    'Đồng hồ FPS': 'FPS counter', 'Khung hình/giây và thời gian khung tệ nhất.': 'Frames per second and worst frame time.',
+    'Âm lượng tổng': 'Master volume', 'Tiếng robot và bóng': 'Robot and ball sounds', 'Lời hô của sân': 'Field announcer',
+    '“Drivers, pick up your controllers” trước TELEOP (giọng tiếng Anh của trình duyệt).': '“Drivers, pick up your controllers” before TELEOP (browser’s English voice).'
+  };
+  var tOut = new WeakMap(), tVi = new WeakMap(), ATTR = ['aria-label', 'title', 'placeholder'], busy = false;
+  function txText(n) {
+    var v = n.nodeValue; if (!v || !v.trim()) return;
+    if (lang === 'en') {
+      if (tOut.get(n) === v) return;
+      var m = v.match(/^(\s*)([\s\S]*?)(\s*)$/), ck = n.parentNode && n.parentNode.closest && n.parentNode.closest('[data-k]'), t = (ck && EN[m[2] + '@' + ck.dataset.k]) !== undefined && ck ? EN[m[2] + '@' + ck.dataset.k] : EN[m[2]];
+      if (t !== undefined) { var r = m[1] + t + m[3]; tVi.set(n, v); tOut.set(n, r); n.nodeValue = r; } else tOut.delete(n);
+    } else if (tOut.has(n) && tOut.get(n) === v) { n.nodeValue = tVi.get(n); tOut.delete(n); }
+  }
+  function txAttr(el) {
+    for (var i = 0; i < ATTR.length; i++) {
+      var a = ATTR[i], v = el.getAttribute && el.getAttribute(a); if (v == null) continue;
+      var st = el.__bbA && el.__bbA[a];
+      if (lang === 'en') { if (st && st[1] === v) continue; if (EN[v] !== undefined) { (el.__bbA = el.__bbA || {})[a] = [v, EN[v]]; el.setAttribute(a, EN[v]); } }
+      else if (st && st[1] === v) { el.setAttribute(a, st[0]); delete el.__bbA[a]; }
+    }
+  }
+  function walk(root) {
+    if (root.nodeType === 3) { txText(root); return; }
+    if (root.nodeType !== 1 || /^(SCRIPT|STYLE)$/.test(root.tagName)) return;
+    txAttr(root);
+    var w = document.createTreeWalker(root, 5, { acceptNode: function (n) { return n.nodeType === 1 && /^(SCRIPT|STYLE)$/.test(n.tagName) ? 2 : 1; } }), n;
+    while ((n = w.nextNode())) { if (n.nodeType === 3) txText(n); else txAttr(n); }
+  }
+  var mo = new MutationObserver(function (recs) {
+    if (busy) return; busy = true;
+    recs.forEach(function (r) {
+      if (r.type === 'characterData') txText(r.target);
+      else if (r.type === 'attributes') txAttr(r.target);
+      else r.addedNodes.forEach(walk);
+    });
+    mo.takeRecords(); busy = false;
+  });
+  function apply() { busy = true; walk(document.body); document.documentElement.lang = lang; mo.takeRecords(); busy = false; }
+  var API = window.BBI18N = {
+    get lang() { return lang; },
+    set: function (l) { l = l === 'en' ? 'en' : 'vi'; if (l === lang) return; lang = l; apply(); },
+    t: function (s) { return lang === 'en' && EN[s] !== undefined ? EN[s] : s; },
+    add: function (o) { for (var k in o) EN[k] = o[k]; if (lang === 'en') apply(); }
+  };
+  mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTR });
+  apply();
+})();
 </script>
 <script>
 (function () {
