@@ -1,10 +1,10 @@
-<div align="center">
+<p align="center">
+  <img src="assets/logo.png" alt="NMA Thunder Claw logo" width="200"/>
+</p>
 
-<img src="assets/logo.png" alt="NMA Thunder Claw logo" width="260"/>
-
-<img src="assets/banner.svg" alt="NMA THUNDER CLAW - FTC Team 32807" width="720"/>
-
-</div>
+<p align="center">
+  <img src="assets/banner.svg" alt="NMA Thunder Claw - FTC Team 32807" width="640"/>
+</p>
 
 # BIOBUZZ Sim 3D (FTC 2026–2027)
 
