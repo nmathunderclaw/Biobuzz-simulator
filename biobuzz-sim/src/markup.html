@@ -1,0 +1,401 @@
+<title>BIOBUZZ Sim 3D</title>
+<meta name="description" content="Mô phỏng 3D trận FTC 2026–2027 BIOBUZZ: vật lý bóng và HIVE, robot tự thiết kế, tự lập trình chiến thuật AUTO, AprilTag auto-aim, trọng tài tự động, bot AI, tay cầm.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Saira+Condensed:wght@600;700;800&display=swap">
+<style>/*STYLE*/</style>
+<div id="app">
+  <canvas id="gl" aria-label="Sân BIOBUZZ 3D"></canvas>
+  <div id="labels" class="labels" aria-hidden="true"></div>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" hidden>
+    <div class="scorebar" role="status" aria-live="off">
+      <div class="al al-red">
+        <div class="al-teams" id="teamsR">—</div>
+        <div class="al-score" id="scoreR">0</div>
+        <div class="al-meta">
+          <span class="tipsq" id="tipsqR" title="Số lần TIP"></span>
+          <span class="hive" title="Mức lật HIVE"><span class="hive-bar"><i id="barR"></i></span><b class="mono" id="pctR">0%</b></span>
+        </div>
+      </div>
+      <div class="clock">
+        <div class="period" id="period">AUTO</div>
+        <div class="time" id="clock">0:30</div>
+      </div>
+      <div class="al al-blue">
+        <div class="al-teams" id="teamsB">—</div>
+        <div class="al-score" id="scoreB">0</div>
+        <div class="al-meta">
+          <span class="hive" title="Mức lật HIVE"><b class="mono" id="pctB">0%</b><span class="hive-bar"><i id="barB"></i></span></span>
+          <span class="tipsq" id="tipsqB" title="Số lần TIP"></span>
+        </div>
+      </div>
+      <div class="sb-sub R"><span class="nect" id="nectR"></span><span id="hpR">NECTAR ĐỎ · KHÓA</span><span class="foulc" id="foulR" hidden></span></div>
+      <div></div>
+      <div class="sb-sub B"><span class="foulc" id="foulB" hidden></span><span id="hpB">NECTAR XANH · KHÓA</span><span class="nect" id="nectB"></span></div>
+    </div>
+    <button type="button" class="hudbtn" id="btnHide">ẨN GIAO DIỆN</button>
+    <div id="banner" class="banner" hidden></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="panels" class="panels"></div>
+    <div id="pips" class="pips"></div>
+    <div class="flowers" id="flowerPanel">
+      <div class="fp-head"><span>FLOWER</span><span id="fpState">mở lúc 1:00</span></div>
+      <div class="fp-row" id="fpRow"></div>
+    </div>
+    <div class="aimkey" id="aimKey" hidden><span class="sw g"></span>vào chắc <span class="sw y"></span>hên xui <span class="sw r"></span>trượt · <span id="aimKeyNote">bắn đứng yên, không tính bóng dội vào</span></div>
+    <div class="legend" id="legend"></div>
+    <div class="padwarn" id="padWarn" hidden><span id="padWarnText">Chưa thấy tay cầm: cắm vào rồi bấm một nút bất kỳ để lái.</span><button type="button" class="ghost sm" id="padWarnKb">Lái bằng bàn phím</button></div>
+    <div class="camline" id="camLine"></div>
+    <div class="coach" id="coach" hidden><button type="button" class="coach-x" id="coachX" aria-label="Đóng gợi ý">✕</button><div id="coachBody"></div></div>
+    <div class="fps mono" id="fps" hidden></div>
+    <div class="details" id="details" hidden></div>
+  </div>
+
+  <!-- ================= MENU ================= -->
+  <div id="menu" class="menu">
+    <nav class="menu-nav" aria-label="Menu chính">
+      <header class="brand">
+        <div class="brand-kicker">FTC 2026–2027 · FIRST CANOPY</div>
+        <h1 class="brand-title">BIOBUZZ <span>Sim 3D</span></h1>
+      </header>
+      <div class="nav-list" id="navList">
+        <button type="button" class="nav-btn" data-screen="match"><b>Đấu trận</b><span>Bạn + bot đồng đội, đấu 2 bot</span></button>
+        <button type="button" class="nav-btn" data-screen="practice"><b>Luyện tập</b><span>Một mình trên sân, xếp lại bất cứ lúc nào</span></button>
+        <button type="button" class="nav-btn" data-screen="duo"><b>Hai người</b><span>Chung một máy: đối đầu, cùng đội, lái + điều khiển</span></button>
+        <button type="button" class="nav-btn" data-screen="online"><b>Chơi online</b><span>Hai máy, một phòng: đối đầu hoặc cùng đội</span></button>
+        <button type="button" class="nav-btn" data-screen="garage"><b>Xưởng robot</b><span>Thiết kế robot, xem 3D, mã chia sẻ</span></button>
+        <button type="button" class="nav-btn" data-screen="auto"><b>Chiến thuật AUTO</b><span>Tự lập trình 30 giây AUTO, chạy thử ngay</span></button>
+        <button type="button" class="nav-btn" data-screen="settings"><b>Cài đặt</b><span>Điều khiển, gán phím, hiển thị, âm thanh</span></button>
+        <button type="button" class="nav-btn" data-screen="howto"><b>Cách chơi</b><span>Luật BIOBUZZ và điểm số</span></button>
+        <button type="button" class="nav-btn" data-screen="pads"><b>Kiểm tra tay cầm</b><span>Xem cần, cò, nút theo thời gian thực</span></button>
+        <button type="button" class="nav-btn" data-screen="notes"><b>Độ chính xác</b><span>Mô phỏng gì, lấy số liệu từ đâu</span></button>
+      </div>
+      <div class="nav-foot"><span class="pad-state" id="padState">Chưa có tay cầm</span></div>
+    </nav>
+
+    <main class="menu-main" id="menuMain">
+      <!-- home: the live match behind is the hero -->
+      <section class="screen home" id="scr-home">
+        <div class="home-card">
+          <p class="home-lead">Sân dựng từ file CAD chính thức của FIRST, luật và bóng theo Competition Manual. Robot chạy bằng mô hình mô-tơ goBILDA, pin sụt áp, flywheel có quán tính, bóng xoáy Magnus. Tự lập trình chiến thuật AUTO cho đội và chạy thử ngay. Trọng tài tự thổi G402, G410, G421, G426. Mỗi trận được ghi lại để xem replay và phân tích; chơi online hai máy qua mã phòng. Lái bằng tay cầm; kéo chuột để chỉnh góc camera.</p>
+          <div class="home-actions">
+            <button type="button" class="go" id="btnQuick">Vào trận nhanh <span>Enter</span></button>
+            <button type="button" class="ghost" data-screen="match">Tùy chỉnh trận</button>
+          </div>
+          <p class="home-last" id="homeLast"></p>
+        </div>
+      </section>
+
+      <!-- match setup -->
+      <section class="screen" id="scr-match" hidden>
+        <h2 class="scr-title">Đấu trận</h2>
+        <div class="form-grid">
+          <div class="field wide"><div class="lab">Robot của bạn</div><div class="robot-pick" id="mRobot"></div></div>
+          <div class="field"><div class="lab">Vị trí</div>
+            <div class="seg seg-slots" id="mSlot"><button type="button" data-v="R0" class="red">ĐỎ 1</button><button type="button" data-v="R1" class="red">ĐỎ 2</button><button type="button" data-v="B0" class="blue">XANH 1</button><button type="button" data-v="B1" class="blue">XANH 2</button></div></div>
+          <div class="field"><div class="lab">Điểm xuất phát (G304)</div>
+            <div class="seg" id="mStart"><button type="button" data-v="audience">Gần khán đài</button><button type="button" data-v="alliance">Tường liên minh</button><button type="button" data-v="far">Phía xa</button></div></div>
+          <div class="field"><div class="lab"><label for="mAuto">AUTO của bạn</label></div><select id="mAuto" class="select"></select>
+            <p class="note"><button type="button" class="linkbtn" data-screen="auto">Soạn chiến thuật AUTO riêng →</button></p></div>
+          <div class="field"><div class="lab"><label for="mPAuto">AUTO của bot đồng đội</label></div><select id="mPAuto" class="select"></select></div>
+          <div class="field"><div class="lab">Bot AI</div>
+            <div class="seg" id="mSkill"><button type="button" data-v="easy">Dễ</button><button type="button" data-v="normal">Vừa</button><button type="button" data-v="hard">Khó</button></div></div>
+          <div class="field"><div class="lab"><label for="mPartner">Đồng đội</label></div><select id="mPartner" class="select"></select></div>
+          <div class="field"><div class="lab"><label for="mOpp1">Đối thủ 1</label></div><select id="mOpp1" class="select"></select></div>
+          <div class="field"><div class="lab"><label for="mOpp2">Đối thủ 2</label></div><select id="mOpp2" class="select"></select></div>
+          <div class="field"><div class="lab"><label for="mTeam">Số đội</label></div><input id="mTeam" class="input" inputmode="numeric" maxlength="5" autocomplete="off"></div>
+          <div class="field"><div class="lab">Human player</div>
+            <div class="seg" id="mHp"><button type="button" data-v="auto">Tự động</button><button type="button" data-v="manual">Tự bấm</button></div></div>
+          <div class="field"><div class="lab">Trọng tài</div>
+            <div class="seg" id="mFouls"><button type="button" data-v="on">Thổi phạt</button><button type="button" data-v="off">Tắt</button></div></div>
+          <div class="field wide"><div class="lab"><label for="mTip">POLLEN để lật CELL rỗng: <output id="mTipOut" class="mono">8</output></label></div>
+            <input id="mTip" type="range" min="6" max="11" step="1"><p class="note">Field Setup Guide 12.3: CELL phải lật với 8 POLLEN (hoặc 3 NECTAR + 3 POLLEN) và giữ nguyên với 7. Đổi số này để thử HIVE lắp chặt hoặc lỏng.</p></div>
+        </div>
+        <div class="class-check" id="mCheck"></div>
+        <div class="scr-actions"><button type="button" class="go" id="btnMatch">Vào trận <span>Enter</span></button><button type="button" class="ghost" data-back>Quay lại</button></div>
+      </section>
+
+      <!-- practice -->
+      <section class="screen" id="scr-practice" hidden>
+        <h2 class="scr-title">Luyện tập</h2>
+        <div class="form-grid">
+          <div class="field wide"><div class="lab">Robot</div><div class="robot-pick" id="pRobot"></div></div>
+          <div class="field"><div class="lab">Vị trí</div>
+            <div class="seg seg-slots" id="pSlot"><button type="button" data-v="R0" class="red">ĐỎ</button><button type="button" data-v="B0" class="blue">XANH</button></div></div>
+          <div class="field"><div class="lab">Đồng hồ</div>
+            <div class="seg" id="pTimer"><button type="button" data-v="free">Không giới hạn</button><button type="button" data-v="match">Đủ 2:38</button></div></div>
+          <div class="field"><div class="lab">FLOWER</div>
+            <div class="seg" id="pFlowers"><button type="button" data-v="open">Mở ngay</button><button type="button" data-v="rules">Theo luật (1:00)</button></div></div>
+          <div class="field"><div class="lab">Người cản</div>
+            <div class="seg" id="pDefender"><button type="button" data-v="none">Không</button><button type="button" data-v="wall">Bot phòng thủ</button></div></div>
+          <div class="field"><div class="lab">Human player</div>
+            <div class="seg" id="pHp"><button type="button" data-v="auto">Tự động</button><button type="button" data-v="manual">Tự bấm</button></div></div>
+          <div class="field"><div class="lab"><label for="pTip">POLLEN để lật: <output id="pTipOut" class="mono">8</output></label></div><input id="pTip" type="range" min="6" max="11" step="1"></div>
+        </div>
+        <p class="note">Bấm <kbd id="pResetKey">Delete</kbd> (hoặc chọn trong menu tạm dừng) để xếp lại toàn bộ bóng và HIVE về đầu trận, robot giữ nguyên chỗ.</p>
+        <div class="scr-actions"><button type="button" class="go" id="btnPractice">Vào sân <span>Enter</span></button><button type="button" class="ghost" data-back>Quay lại</button></div>
+      </section>
+
+      <!-- two players -->
+      <section class="screen" id="scr-duo" hidden>
+        <h2 class="scr-title">Hai người · một máy</h2>
+        <div class="form-grid">
+          <div class="field wide"><div class="lab">Kiểu chơi</div>
+            <div class="seg seg-wrap" id="dMode"><button type="button" data-v="versus">Đối đầu (mỗi người một liên minh)</button><button type="button" data-v="coop">Cùng đội</button><button type="button" data-v="codrive">Chung robot: lái + điều khiển</button></div>
+            <p class="note" id="dModeNote"></p></div>
+          <div class="field"><div class="lab">Người 1 dùng</div><div class="seg" id="dDev1"><button type="button" data-v="gp0">Tay cầm 1</button><button type="button" data-v="gp1">Tay cầm 2</button><button type="button" data-v="kbA" class="kbopt">Phím trái</button></div></div>
+          <div class="field"><div class="lab">Người 2 dùng</div><div class="seg" id="dDev2"><button type="button" data-v="gp0">Tay cầm 1</button><button type="button" data-v="gp1">Tay cầm 2</button><button type="button" data-v="kbB" class="kbopt">Phím phải</button></div></div>
+          <div class="field"><div class="lab">Robot người 1</div><div class="robot-pick compact" id="dRobot1"></div></div>
+          <div class="field"><div class="lab">Robot người 2</div><div class="robot-pick compact" id="dRobot2"></div></div>
+          <div class="field"><div class="lab">Bot còn lại</div><div class="seg" id="dSkill"><button type="button" data-v="none">Không có</button><button type="button" data-v="easy">Dễ</button><button type="button" data-v="normal">Vừa</button><button type="button" data-v="hard">Khó</button></div></div>
+          <div class="field"><div class="lab"><label for="dAuto">AUTO người 1</label></div><select id="dAuto" class="select"></select></div>
+          <div class="field" id="dAuto2Field"><div class="lab"><label for="dAuto2">AUTO người 2</label></div><select id="dAuto2" class="select"></select></div>
+        </div>
+        <div class="keys-duo" id="dKeys"></div>
+        <div class="scr-actions"><button type="button" class="go" id="btnDuo">Vào trận <span>Enter</span></button><button type="button" class="ghost" data-back>Quay lại</button></div>
+      </section>
+
+      <!-- online -->
+      <section class="screen" id="scr-online" hidden>
+        <h2 class="scr-title">Chơi online</h2>
+        <p class="note">Mỗi người một máy, một robot. Máy tạo phòng chạy vật lý; máy vào phòng gửi tay lái và nhận hình khoảng 20 lần mỗi giây, nên người vào phòng thấy trễ bằng ping cộng khoảng 0,1 giây.</p>
+        <p class="ol-avail" id="olAvail"></p>
+        <div class="form-grid">
+          <div class="field"><div class="lab"><label for="olName">Tên hiển thị</label></div><input id="olName" class="input" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Người chơi"></div>
+          <div class="field"><div class="lab">Kiểu trận (chủ phòng chọn)</div><div class="seg" id="olMode"><button type="button" data-v="versus">Đối đầu</button><button type="button" data-v="coop">Cùng đội</button></div></div>
+          <div class="field"><div class="lab">Bot thêm vào (chủ phòng chọn)</div><div class="seg" id="olBots"><button type="button" data-v="none">Không</button><button type="button" data-v="easy">Dễ</button><button type="button" data-v="normal">Vừa</button><button type="button" data-v="hard">Khó</button></div></div>
+          <div class="field"><div class="lab"><label for="olAuto">AUTO của bạn</label></div><select id="olAuto" class="select"></select></div>
+          <div class="field wide"><div class="lab">Robot của bạn</div><div class="robot-pick compact" id="olRobot"></div></div>
+        </div>
+        <div class="ol-box" id="olIdle">
+          <button type="button" class="go" id="olCreate">Tạo phòng</button>
+          <div class="ol-join"><label class="lab" for="olCode">Hoặc vào phòng bằng mã</label><div class="ol-join-row"><input id="olCode" class="input mono" placeholder="MÃ" maxlength="4" autocomplete="off" spellcheck="false"><button type="button" class="ghost" id="olJoin">Vào phòng</button></div></div>
+        </div>
+        <div class="ol-box ol-lobby" id="olLobby" hidden>
+          <div class="ol-head"><span class="lab">Phòng</span><b class="ol-code mono" id="olRoomCode">----</b><button type="button" class="ghost sm" id="olCopy">Chép mã</button><span class="ol-conn" id="olConn">đang kết nối…</span></div>
+          <ul class="ol-peers" id="olPeers"></ul>
+          <p class="note" id="olWait"></p>
+          <div class="ol-actions"><button type="button" class="go" id="olStart" disabled>Bắt đầu trận</button><button type="button" class="ghost" id="olLeave">Rời phòng</button></div>
+        </div>
+        <output class="note ol-status" id="olStatus"></output>
+      </section>
+
+      <!-- robot creator -->
+      <section class="screen garage" id="scr-garage" hidden>
+        <h2 class="scr-title">Xưởng robot</h2>
+        <div class="garage-grid">
+          <div class="garage-left">
+            <div class="robot-list" id="gList"></div>
+            <div class="preview"><canvas id="pvCanvas" aria-label="Xem trước robot 3D (kéo để xoay)"></canvas><span class="pv-hint">kéo để xoay · cuộn để phóng</span></div>
+            <div class="class-check" id="gCheck"></div>
+            <div class="stats" id="gStats"></div>
+          </div>
+          <div class="garage-right">
+            <div class="g-actions" id="gActions">
+              <button type="button" class="ghost sm" id="gNew">Robot mới</button>
+              <button type="button" class="ghost sm" id="gDup">Nhân bản</button>
+              <button type="button" class="ghost sm" id="gCopy">Chép mã chia sẻ</button>
+              <button type="button" class="ghost sm" id="gTry">Thử trong luyện tập</button>
+              <button type="button" class="ghost sm danger" id="gDel">Xóa</button>
+            </div>
+            <div class="g-confirm" id="gConfirm" hidden><span id="gConfirmText">Xóa robot này?</span><button type="button" class="ghost sm danger" id="gConfirmYes">Xóa</button><button type="button" class="ghost sm" id="gConfirmNo">Giữ lại</button></div>
+            <div class="g-import"><label for="gCode" class="lab">Dán mã chia sẻ</label><div class="g-import-row"><input id="gCode" class="input mono" placeholder="BBZ1.…" autocomplete="off" spellcheck="false"><button type="button" class="ghost sm" id="gImport">Nhập</button></div><output id="gCodeOut" class="note"></output></div>
+            <div class="g-form" id="gForm"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AUTO strategy editor -->
+      <section class="screen autoed" id="scr-auto" hidden>
+        <h2 class="scr-title">Chiến thuật AUTO</h2>
+        <p class="note">Sân nhìn từ khu lái ĐỎ. Khi đội bạn đấu bên XANH, chương trình tự xoay 180° theo đúng đối xứng của sân. Bấm lên sân để thêm điểm đến, kéo các điểm để sửa, kéo robot dọc tường để đổi chỗ xuất phát.</p>
+        <div class="ae-grid">
+          <div class="ae-left">
+            <div class="ae-mapwrap"><canvas id="aeMap" aria-label="Sân nhìn từ trên với đường đi AUTO (bấm để thêm điểm, kéo để sửa)"></canvas><div class="ae-coord mono" id="aeCoord"></div></div>
+            <div class="ae-run">
+              <button type="button" class="go ae-go" id="aeRun">Chạy thử <span>30 s</span></button>
+              <div class="seg seg-sm" id="aeSpeed"><button type="button" data-v="1">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="4">4×</button><button type="button" data-v="0">Tức thì</button></div>
+              <label class="ae-check"><input type="checkbox" id="aeHeat"> Bản đồ bắn</label>
+              <span class="ae-clock mono" id="aeClock"></span>
+            </div>
+            <div class="ae-result" id="aeResult"><p class="note">Bấm <b>Chạy thử</b> để robot chạy đúng chương trình này bằng bộ vật lý của trận: xem nó bắn, nhặt, PARK tới đâu và mỗi bước mất bao lâu.</p></div>
+          </div>
+          <div class="ae-right">
+            <div class="ae-lib"><label class="sr" for="aeList">Chương trình</label><select id="aeList" class="select"></select><button type="button" class="ghost sm" id="aeNew">Mới</button><button type="button" class="ghost sm" id="aeDup">Nhân bản</button><button type="button" class="ghost sm danger" id="aeDel">Xóa</button></div>
+            <div class="g-confirm" id="aeConfirm" hidden><span id="aeConfirmText">Xóa chương trình này?</span><button type="button" class="ghost sm danger" id="aeConfirmYes">Xóa</button><button type="button" class="ghost sm" id="aeConfirmNo">Giữ lại</button></div>
+            <div class="ae-row2">
+              <div class="field"><div class="lab"><label for="aeName">Tên</label></div><input id="aeName" class="input" maxlength="40" autocomplete="off"></div>
+              <div class="field"><div class="lab"><label for="aeRobot">Robot chạy thử</label></div><select id="aeRobot" class="select"></select></div>
+            </div>
+            <div class="field"><div class="lab">Xuất phát · chạm tường, ngoài LOADING ZONE (G304)</div>
+              <div class="seg seg-sm" id="aeWall"><button type="button" data-v="a">Tường khán đài</button><button type="button" data-v="l">Tường liên minh</button><button type="button" data-v="f">Tường phía xa</button></div>
+              <div class="seg seg-sm" id="aeHead"><button type="button" data-v="0">Nhìn vào sân</button><button type="button" data-v="90">Xoay trái 90°</button><button type="button" data-v="-90">Xoay phải 90°</button><button type="button" data-v="180">Quay lưng</button></div></div>
+            <div class="ae-steps" id="aeSteps" aria-label="Các bước"></div>
+            <div class="ae-add" id="aeAdd"><span class="lab">Thêm bước</span>
+              <button type="button" class="ghost sm" data-add="move">Đi tới</button><button type="button" class="ghost sm" data-add="shoot">Bắn</button><button type="button" class="ghost sm" data-add="collect">Nhặt bóng</button><button type="button" class="ghost sm" data-add="turn">Xoay</button><button type="button" class="ghost sm" data-add="wait">Chờ</button><button type="button" class="ghost sm" data-add="until">Chờ tới giây</button><button type="button" class="ghost sm" data-add="park">PARK</button></div>
+            <ul class="ae-warn" id="aeWarn"></ul>
+            <div class="g-import"><label for="aeCode" class="lab">Mã chia sẻ chương trình</label><div class="g-import-row"><input id="aeCode" class="input mono" placeholder="BBA1.…" autocomplete="off" spellcheck="false"><button type="button" class="ghost sm" id="aeCopy">Chép mã</button><button type="button" class="ghost sm" id="aeImport">Nhập</button></div><output id="aeNote" class="note"></output></div>
+            <div class="scr-actions"><button type="button" class="go" id="aeUse">Dùng cho trận của tôi</button><button type="button" class="ghost" id="aeTry">Thử trong trận</button><button type="button" class="ghost" data-back>Quay lại</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- settings -->
+      <section class="screen" id="scr-settings" hidden>
+        <h2 class="scr-title">Cài đặt</h2>
+        <div class="tabs" id="sTabs" role="tablist">
+          <button type="button" role="tab" data-tab="ctl">Điều khiển</button><button type="button" role="tab" data-tab="keys">Gán phím &amp; tay cầm</button><button type="button" role="tab" data-tab="view">Hiển thị</button><button type="button" role="tab" data-tab="sound">Âm thanh</button>
+        </div>
+        <div class="tab-body" id="sBody"></div>
+        <div class="scr-actions"><button type="button" class="ghost" id="sReset">Khôi phục mặc định</button><button type="button" class="ghost" data-back>Xong</button></div>
+      </section>
+
+      <!-- how to play -->
+      <section class="screen prose" id="scr-howto" hidden>
+        <h2 class="scr-title">Cách chơi BIOBUZZ</h2>
+        <p>Hai liên minh, mỗi bên 2 robot. Giữa sân có khung với hai <b>HIVE</b> bập bênh, mỗi HIVE có hai <b>CELL</b>. Bắn POLLEN (vàng, 2,8 in) hoặc NECTAR màu mình (3,6 in) vào CELL đang ngửa của liên minh mình. Đủ nặng thì HIVE <b>TIP</b>: CELL đó đổ bóng ra sàn và CELL bên kia ngửa lên.</p>
+        <div class="tbl-wrap"><table class="rules">
+          <thead><tr><th>Thành tích</th><th>AUTO</th><th>TELEOP</th></tr></thead>
+          <tbody>
+            <tr><td>LEAVE: không chạm tường sân khi hết AUTO</td><td>3</td><td>–</td></tr>
+            <tr><td>PARK: một phần trong LOADING ZONE</td><td>5</td><td>5</td></tr>
+            <tr><td>HIVE TIP</td><td>20</td><td>20</td></tr>
+            <tr><td>POLLEN/NECTAR còn trong CELL cuối trận</td><td>–</td><td>2</td></tr>
+            <tr><td>Bottom NECTAR Bonus (mỗi FLOWER)</td><td>–</td><td>5</td></tr>
+            <tr><td>POLLEN/NECTAR trong FLOWER mình sở hữu</td><td>–</td><td>2</td></tr>
+            <tr><td>POLLEN/NECTAR trong GARDEN</td><td>–</td><td>1</td></tr>
+            <tr><td>Lỗi MINOR / MAJOR của đối thủ</td><td>5</td><td>20</td></tr>
+          </tbody>
+        </table></div>
+        <ul class="rule-list">
+          <li>AUTO 30 giây, chuyển tiếp 8 giây, TELEOP 2:00. FLOWER chỉ tính khi còn 1:00; NECTAR vào FLOWER sớm hơn là lỗi MAJOR (G410).</li>
+          <li>Sở hữu FLOWER là liên minh có NECTAR cao nhất trong vùng tính điểm. Chỉ được rút POLLEN từ lỗ ở đáy FLOWER (G418).</li>
+          <li>Mỗi lần HIVE của mình TIP, human player được đưa 1 NECTAR vào LOADING ZONE. Khi còn 1:00 thì đưa hết. Đưa sớm là lỗi MINOR (G426).</li>
+          <li>Robot giữ tối đa 4 bóng (G407) và không được giữ NECTAR của đối thủ (G408).</li>
+          <li>AUTO: ở yên phần sân của mình, cột A–C là đỏ, D–F là xanh (G402). PIN đối thủ quá 3 giây là MAJOR, thêm 1 MAJOR mỗi 3 giây (G421).</li>
+          <li>RP: thắng 3, hòa 1. SWARM khi LEAVE + PARK ≥ 16. POLLINATOR khi ≥ 4 và ≥ 7 TIP.</li>
+        </ul>
+        <h3>Ngắm bằng AprilTag</h3>
+        <p>Đáy mỗi CELL có 4 tag 36h11. Camera trên robot thấy tag thì biết khoảng cách và hướng tới CELL đang ngửa. Turret tự xoay theo; súng cố định cần xoay cả robot: giữ nút bắn và robot tự căn (có thể tắt trong Cài đặt). Đèn LED vàng là đang bám tag, xanh lá là đã khóa: flywheel đủ tốc, hood đúng góc, hướng đúng.</p>
+        <h3>Xem lại và phân tích</h3>
+        <p>Mỗi trận được ghi lại 30 khung/giây. Trong menu tạm dừng chọn <b>Xem lại 10 giây vừa rồi</b>; hết trận chọn <b>Xem lại trận</b> để tua, chạy chậm tới ¼×, đổi góc máy hoặc để máy quay tự động bám robot vừa bắn. Bảng kết quả có thêm <b>Diễn biến trận</b> (điểm hai bên theo thời gian, lúc TIP, lúc bị phạt) và <b>Bản đồ sân</b> (chỗ robot đứng nhiều, đường đi, vị trí từng cú bắn vào hay trượt, tỉ lệ vào theo cự ly).</p>
+        <h3>Chiến thuật AUTO của đội bạn</h3>
+        <p>Vào <b>Chiến thuật AUTO</b> để tự lập trình 30 giây đầu trận: chọn chỗ xuất phát dọc tường (G304), bấm lên sân để thêm điểm đến, rồi thêm các bước <b>Bắn</b> (tại chỗ hoặc tự tìm chỗ), <b>Nhặt bóng</b> trong một vòng tròn, <b>Xoay</b>, <b>Chờ</b>, <b>Chờ tới giây</b> (nhường đường cho đồng đội) và <b>PARK</b>. Bấm <b>Chạy thử</b> để xem robot chạy thật bằng bộ vật lý, mỗi bước mất bao lâu và được bao nhiêu điểm; bật <b>Bản đồ bắn</b> để thấy chỗ nào bắn vào được. Chọn chương trình cho bạn và cho bot đồng đội ở màn hình Đấu trận (cả Hai người và Chơi online); gửi mã <b>BBA1.…</b> để cả đội dùng chung.</p>
+        <h3>Góc camera</h3>
+        <p>Trong trận kéo chuột trái để xoay góc nhìn, Shift + kéo (hoặc chuột phải) để dời, lăn chuột để thu phóng, nhấp đúp để đặt lại. Mỗi góc nhìn (khu lái, theo robot, khán đài, từ trên, camera robot, tự do) nhớ góc riêng. Với tay cầm: tạm dừng → <b>Chỉnh góc camera này</b>, cần trái xoay, cần phải dời, LT/RT thu phóng.</p>
+        <h3>Chơi online</h3>
+        <p>Một người tạo phòng và gửi mã 4 ký tự, người kia nhập mã. Máy tạo phòng chạy toàn bộ vật lý nên lái mượt như chơi một mình; máy vào phòng thấy trễ thêm bằng ping. Người vào phòng mở menu quá 3 giây thì bot lái tạm robot của họ.</p>
+        <h3>Điều khiển mặc định</h3>
+        <div class="ctl-grid" id="howKeys"></div>
+      </section>
+
+      <!-- controller test -->
+      <section class="screen" id="scr-pads" hidden>
+        <h2 class="scr-title">Kiểm tra tay cầm</h2>
+        <p class="note" id="padsNote">Cắm tay cầm (Xbox, PlayStation, Logitech F310 ở chế độ X) rồi bấm một nút bất kỳ để trình duyệt nhận.</p>
+        <div class="pad-grid" id="padGrid"></div>
+      </section>
+
+      <!-- accuracy notes -->
+      <section class="screen prose" id="scr-notes" hidden>
+        <h2 class="scr-title">Độ chính xác của mô phỏng</h2>
+        <div id="notesBody"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ================= PAUSE ================= -->
+  <div id="pause" class="overlay" hidden>
+    <div class="ov-card">
+      <h2>Tạm dừng</h2>
+      <div class="ov-actions">
+        <button type="button" class="go" id="btnResume">Tiếp tục</button>
+        <button type="button" class="ghost" id="btnReplayPause">Xem lại 10 giây vừa rồi</button>
+        <button type="button" class="ghost" id="btnReset" hidden>Xếp lại sân</button>
+        <button type="button" class="ghost" id="btnRestart">Chơi lại trận</button>
+        <button type="button" class="ghost" id="btnMenu">Về menu</button>
+      </div>
+      <div class="ov-opts">
+        <div class="lab">Góc nhìn</div>
+        <div class="seg seg-wrap" id="optCam">
+          <button type="button" data-v="driver">Khu lái</button><button type="button" data-v="follow">Theo robot</button><button type="button" data-v="broadcast">Khán đài</button><button type="button" data-v="top">Từ trên</button><button type="button" data-v="pov">Camera robot</button><button type="button" data-v="free">Tự do</button>
+        </div>
+        <button type="button" class="ghost sm" id="btnCamEdit">Chỉnh góc camera này…</button>
+        <p class="note">Trong trận: kéo chuột trái để xoay góc nhìn, Shift + kéo hoặc chuột phải để dời, lăn chuột để thu phóng, nhấp đúp để đặt lại. Mỗi góc nhìn nhớ riêng.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- camera angle editing (paused) -->
+  <div id="camEdit" class="camedit" hidden>
+    <div class="ce-bar">
+      <b>CHỈNH GÓC CAMERA</b>
+      <span>Chuột: kéo để xoay · Shift/chuột phải để dời · lăn để thu phóng. Phím: ← → ↑ ↓ xoay · W A S D dời · + − thu phóng. Tay cầm: cần trái xoay, cần phải dời, LT/RT thu phóng.</span>
+      <button type="button" class="ghost sm" id="camEditReset">Đặt lại (0)</button>
+      <button type="button" class="go sm" id="camEditDone">Xong <span>Esc</span></button>
+    </div>
+  </div>
+
+  <!-- ================= RESULTS ================= -->
+  <div id="results" class="overlay" hidden>
+    <div class="ov-card wide">
+      <div class="res-head">
+        <div class="res-side red"><span class="res-name">ĐỎ</span><span class="res-score" id="resR">0</span></div>
+        <div class="res-mid" id="resWinner">HÒA</div>
+        <div class="res-side blue"><span class="res-score" id="resB">0</span><span class="res-name">XANH</span></div>
+      </div>
+      <div class="seg res-tabs" id="resTabs" role="tablist"><button type="button" role="tab" data-v="sum" class="on">Tổng kết</button><button type="button" role="tab" data-v="flow">Diễn biến trận</button><button type="button" role="tab" data-v="map">Bản đồ sân</button></div>
+      <div id="resSum" class="res-pane">
+        <div class="res-cols">
+          <div class="tbl-wrap"><table class="res-table" id="resTable"></table></div>
+          <div class="tbl-wrap"><table class="res-table robots" id="resRobots"></table></div>
+        </div>
+        <div class="res-fouls" id="resFouls"></div>
+      </div>
+      <div id="resFlow" class="res-pane" hidden>
+        <div class="chart-wrap"><canvas id="resChart" aria-label="Điểm hai liên minh theo thời gian"></canvas></div>
+        <div class="chart-key"><span><i class="k-r"></i>ĐỎ</span><span><i class="k-b"></i>XANH</span><span><i class="k-tip"></i>HIVE TIP</span><span><i class="k-foul"></i>lỗi MINOR</span><span><i class="k-major"></i>lỗi MAJOR</span><span>nền màu: bên đang dẫn</span></div>
+        <div class="flow-stats" id="resFlowStats"></div>
+      </div>
+      <div id="resMap" class="res-pane" hidden>
+        <div class="map-top"><div class="seg seg-sm seg-slots" id="resMapRobot"></div><div class="seg seg-sm" id="resMapLayers"><button type="button" data-v="heat" class="on">Chỗ đứng</button><button type="button" data-v="path">Đường đi</button><button type="button" data-v="shots" class="on">Cú bắn</button></div></div>
+        <div class="map-wrap"><canvas id="resMapCv" aria-label="Bản đồ sân nhìn từ trên"></canvas><div class="map-side" id="resMapSide"></div></div>
+      </div>
+      <div class="ov-actions row three">
+        <button type="button" class="go" id="btnAgain">Đấu lại</button>
+        <button type="button" class="ghost" id="btnReplay">Xem lại trận</button>
+        <button type="button" class="ghost" id="btnMenu2">Về menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= REPLAY ================= -->
+  <div id="replay" class="rpl" hidden>
+    <div class="rpl-top">
+      <span class="rpl-tag"><i></i>REPLAY</span>
+      <span class="rpl-score"><b class="R" id="rpR">0</b><span class="rpl-clock mono" id="rpClock">AUTO 0:30</span><b class="B" id="rpB">0</b></span>
+      <span class="rpl-slow" id="rpSlow" hidden>SLOW-MO</span>
+    </div>
+    <div class="rpl-panel">
+      <div class="rpl-seekrow">
+        <button type="button" class="rpl-btn" id="rpBack" aria-label="Lùi 5 giây">−5</button>
+        <button type="button" class="rpl-btn main" id="rpPlay" aria-label="Tạm dừng">❚❚</button>
+        <button type="button" class="rpl-btn" id="rpFwd" aria-label="Tới 5 giây">+5</button>
+        <div class="rpl-track"><div class="rpl-ticks" id="rpTicks"></div><input type="range" id="rpSeek" min="0" max="1000" step="1" value="0" aria-label="Tua replay"></div>
+        <span class="rpl-time mono" id="rpTime">0:00 / 0:00</span>
+      </div>
+      <div class="rpl-row">
+        <div class="rpl-group"><span class="lab">Tốc độ</span><div class="seg seg-sm" id="rpSpeed"><button type="button" data-v="0.25">¼×</button><button type="button" data-v="0.5">½×</button><button type="button" data-v="1">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="4">4×</button></div></div>
+        <div class="rpl-group"><span class="lab">Góc nhìn</span><div class="seg seg-sm" id="rpCam"><button type="button" data-v="auto">Tự động</button><button type="button" data-v="broadcast">Khán đài</button><button type="button" data-v="follow">Theo robot</button><button type="button" data-v="pov">Camera robot</button><button type="button" data-v="top">Từ trên</button><button type="button" data-v="free">Tự do</button></div></div>
+        <div class="rpl-group"><span class="lab">Robot</span><div class="seg seg-sm seg-slots" id="rpRobots"></div></div>
+        <button type="button" class="ghost sm" id="rpExit">Thoát replay</button>
+      </div>
+      <div class="rpl-foot"><span class="rpl-now" id="rpCamNow"></span><span class="rpl-keys"><kbd>Space</kbd> dừng/chạy · <kbd>←</kbd><kbd>→</kbd> tua 5 s · <kbd>,</kbd><kbd>.</kbd> từng khung · <kbd>↑</kbd><kbd>↓</kbd> tốc độ · <kbd>C</kbd> góc nhìn · <kbd>Tab</kbd> đổi robot · <kbd>Esc</kbd> thoát · tay cầm: A, LB/RB, Y, X, B</span></div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading"><div class="ld-bar"><i></i></div><span>Đang dựng sân…</span></div>
+  <div id="fatal" class="overlay" hidden><div class="ov-card"><h2>Không khởi động được 3D</h2><p id="fatalMsg">Trình duyệt chưa bật WebGL.</p></div></div>
+</div>
