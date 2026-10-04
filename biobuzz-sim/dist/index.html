@@ -700,6 +700,8 @@ input[type=range] { width: 100%; accent-color: var(--honey); }
           <div class="field"><div class="lab"><label for="mPartner">Đồng đội</label></div><select id="mPartner" class="select"></select></div>
           <div class="field"><div class="lab"><label for="mOpp1">Đối thủ 1</label></div><select id="mOpp1" class="select"></select></div>
           <div class="field"><div class="lab"><label for="mOpp2">Đối thủ 2</label></div><select id="mOpp2" class="select"></select></div>
+          <div class="field"><div class="lab"><label for="mO1Auto">AUTO của đối thủ 1</label></div><select id="mO1Auto" class="select"></select></div>
+          <div class="field"><div class="lab"><label for="mO2Auto">AUTO của đối thủ 2</label></div><select id="mO2Auto" class="select"></select></div>
           <div class="field"><div class="lab"><label for="mTeam">Số đội</label></div><input id="mTeam" class="input" inputmode="numeric" maxlength="5" autocomplete="off"></div>
           <div class="field"><div class="lab">Human player</div>
             <div class="seg" id="mHp"><button type="button" data-v="auto">Tự động</button><button type="button" data-v="manual">Tự bấm</button></div></div>
@@ -747,6 +749,7 @@ input[type=range] { width: 100%; accent-color: var(--honey); }
           <div class="field"><div class="lab">Bot còn lại</div><div class="seg" id="dSkill"><button type="button" data-v="none">Không có</button><button type="button" data-v="easy">Dễ</button><button type="button" data-v="normal">Vừa</button><button type="button" data-v="hard">Khó</button></div></div>
           <div class="field"><div class="lab"><label for="dAuto">AUTO người 1</label></div><select id="dAuto" class="select"></select></div>
           <div class="field" id="dAuto2Field"><div class="lab"><label for="dAuto2">AUTO người 2</label></div><select id="dAuto2" class="select"></select></div>
+          <div class="field"><div class="lab"><label for="dBotAuto">AUTO của các bot</label></div><select id="dBotAuto" class="select"></select></div>
         </div>
         <div class="keys-duo" id="dKeys"></div>
         <div class="scr-actions"><button type="button" class="go" id="btnDuo">Vào trận <span>Enter</span></button><button type="button" class="ghost" data-back>Quay lại</button></div>
@@ -832,6 +835,7 @@ input[type=range] { width: 100%; accent-color: var(--honey); }
               <button type="button" class="ghost sm" data-add="move">Đi tới</button><button type="button" class="ghost sm" data-add="shoot">Bắn</button><button type="button" class="ghost sm" data-add="collect">Nhặt bóng</button><button type="button" class="ghost sm" data-add="turn">Xoay</button><button type="button" class="ghost sm" data-add="wait">Chờ</button><button type="button" class="ghost sm" data-add="until">Chờ tới giây</button><button type="button" class="ghost sm" data-add="park">PARK</button></div>
             <ul class="ae-warn" id="aeWarn"></ul>
             <div class="g-import"><label for="aeCode" class="lab">Mã chia sẻ chương trình</label><div class="g-import-row"><input id="aeCode" class="input mono" placeholder="BBA1.…" autocomplete="off" spellcheck="false"><button type="button" class="ghost sm" id="aeCopy">Chép mã</button><button type="button" class="ghost sm" id="aeImport">Nhập</button></div><output id="aeNote" class="note"></output></div>
+            <div class="g-import"><label for="aeAssign" class="lab">Gán chương trình này cho robot khác trong trận</label><div class="g-import-row"><select id="aeAssign" class="select"><option value="partnerAuto">Bot đồng đội</option><option value="opp1Auto">Đối thủ 1</option><option value="opp2Auto">Đối thủ 2</option><option value="dBotAuto">Các bot (chế độ 2 người)</option></select><button type="button" class="ghost sm" id="aeAssignBtn">Gán</button></div></div>
             <div class="scr-actions"><button type="button" class="go" id="aeUse">Dùng cho trận của tôi</button><button type="button" class="ghost" id="aeTry">Thử trong trận</button><button type="button" class="ghost" data-back>Quay lại</button></div>
           </div>
         </div>
@@ -1556,6 +1560,9 @@ function Contact() {
 const POOL = []; for (let i = 0; i < MAXC; i++) POOL.push(new Contact());
 let NC = 0;
 let WARM = new Map();
+// approach speed of a contact in the step before it closed: a speculative contact clamps the ball so it lands exactly on the surface,
+// and restitution has to be taken from the speed it had BEFORE that clamp (otherwise the bounce is erratic and far too dead)
+let SPEC_PREV = new Map(), SPEC_NEXT = new Map();
 const MAT_ID = { floor: 1, wall: 2, frame: 3, cell: 4, arm: 4, flower: 5, ring: 5, robot: 6, ball: 7 };
 function addC(kind, a, nx, ny, nz, gap, mat, key, mid) {
   if (NC >= MAXC) return null;
@@ -1836,9 +1843,10 @@ function preSolve(c) {
   if (c.kind === 1) invSum += c.b.invM;
   if (c.kind === 2) { c.cn = c.ry * c.nz - c.rz * c.ny; invSum += c.cn * c.cn / HV.I; }
   c.mn = 1 / invSum;
-  if (c.gap > SLOP) c.bias = -c.gap / DT;
+  if (c.gap > SLOP) { c.bias = -c.gap / DT; if (vn < -VREST) SPEC_NEXT.set(c.key, vn); }
   else {
-    let bb = vn < -VREST ? -c.e * vn : 0;
+    const pv = SPEC_PREV.get(c.key), vnr = pv !== undefined && pv < vn ? pv : vn;
+    let bb = vnr < -VREST ? -c.e * vnr : 0;
     const push = BETA * (-c.gap - SLOP) / DT;
     if (push > bb) bb = Math.min(push, 30);
     c.bias = bb;
@@ -2693,8 +2701,11 @@ function physicsStep(sim) {
     updateBattery(rb); odometryStep(sim, rb);
   }
   const n = genContacts(sim);
-  WARM = sim._warm || WARM;
+  if (!(sim._warm instanceof Map)) sim._warm = new Map();       // each sim keeps its own warm-start data (it used to leak between sims)
+  if (!(sim._specA instanceof Map)) { sim._specA = new Map(); sim._specB = new Map(); }
+  WARM = sim._warm; SPEC_PREV = sim._specA; SPEC_NEXT = sim._specB; SPEC_NEXT.clear();
   for (let i = 0; i < n; i++) preSolve(POOL[i]);
+  sim._specA = SPEC_NEXT; sim._specB = SPEC_PREV;
   for (const h of sim.hives) hivePre(h);
   for (let it = 0; it < 8; it++) {
     for (let i = 0; i < n; i++) solveContact(POOL[i]);
@@ -6788,7 +6799,7 @@ function autoOptions(cur, withManual) {
 }
 UI.autoSelects = function () {
   const set = S().set;
-  for (const [id, key, manual] of [['mAuto', 'auto', true], ['mPAuto', 'partnerAuto', false], ['dAuto', 'dAuto', true], ['dAuto2', 'dAuto2', true], ['olAuto', 'olAuto', true]]) {
+  for (const [id, key, manual] of [['mAuto', 'auto', true], ['mPAuto', 'partnerAuto', false], ['dAuto', 'dAuto', true], ['dAuto2', 'dAuto2', true], ['olAuto', 'olAuto', true], ['mO1Auto', 'opp1Auto', false], ['mO2Auto', 'opp2Auto', false], ['dBotAuto', 'dBotAuto', false]]) {
     const el = $(id); if (!el) continue;
     let cur = set[key];
     if (typeof cur === 'string' && cur.startsWith('plan:') && !S().autos.exists(cur.slice(5))) { cur = 'full'; set[key] = cur; }
@@ -6901,7 +6912,7 @@ UI.init = function () {
   robotPicker('mRobot', 'robot', false, () => { $('mCheck').innerHTML = classCheckHTML(S().lib.get(S().set.robot)); });
   seg('mSlot', 'slot'); seg('mStart', 'start'); seg('mSkill', 'skill'); seg('mHp', 'hp'); seg('mFouls', 'fouls');
   UI.autoSelects();
-  autoSelect('mAuto', 'auto', UI.matchNote); autoSelect('mPAuto', 'partnerAuto');
+  autoSelect('mAuto', 'auto', UI.matchNote); autoSelect('mPAuto', 'partnerAuto'); autoSelect('mO1Auto', 'opp1Auto'); autoSelect('mO2Auto', 'opp2Auto');
   robotSelect('mPartner', 'partner'); robotSelect('mOpp1', 'opp1'); robotSelect('mOpp2', 'opp2');
   const team = $('mTeam'); team.value = S().set.team;
   team.addEventListener('input', () => { team.value = team.value.replace(/\D/g, '').slice(0, 5); S().set.team = team.value || '2026'; S().save(); });
@@ -6916,7 +6927,7 @@ UI.init = function () {
   const duoNote = v => { $('dModeNote').textContent = ({ versus: 'Người 1 lái ĐỎ, người 2 lái XANH. Mỗi bên có thể thêm một bot đồng đội.', coop: 'Cả hai cùng liên minh ĐỎ, đấu 2 bot XANH.', codrive: 'Như FTC thật: người 1 (driver) lái khung gầm, người 2 (operator) lo bắn, intake, turret, cánh tay và human player.' })[v]; UI.duoKeys(); };
   seg('dMode', 'dMode', v => { duoNote(v); UI.duoDevices(); }); duoNote(S().set.dMode);
   seg('dDev1', 'dDev1', UI.duoKeys); seg('dDev2', 'dDev2', UI.duoKeys); seg('dSkill', 'dSkill');
-  autoSelect('dAuto', 'dAuto'); autoSelect('dAuto2', 'dAuto2');
+  autoSelect('dAuto', 'dAuto'); autoSelect('dAuto2', 'dAuto2'); autoSelect('dBotAuto', 'dBotAuto');
   robotPicker('dRobot1', 'dRobot1', true); robotPicker('dRobot2', 'dRobot2', true);
   $('btnDuo').addEventListener('click', () => {
     const st = S().set;
@@ -7886,7 +7897,7 @@ function bind() {
   $('aeConfirmYes').addEventListener('click', () => {
     const id = E.id; lib().remove(id); $('aeConfirm').hidden = true;
     const set = S().set;
-    for (const k of ['auto', 'partnerAuto', 'dAuto', 'dAuto2', 'olAuto']) if (set[k] === 'plan:' + id) set[k] = 'full';
+    for (const k of ['auto', 'partnerAuto', 'opp1Auto', 'opp2Auto', 'dAuto', 'dAuto2', 'dBotAuto', 'olAuto']) if (set[k] === 'plan:' + id) set[k] = 'full';
     S().save(); load(lib().all()[0].id); UIx().autoSelects(); note('Đã xóa.');
   });
   $('aeName').addEventListener('input', () => { const v = $('aeName').value; mutate(p => { p.name = v; }, { light: true, keepRun: true }); const o = $('aeList').querySelector(`option[value="${CSS.escape(E.id)}"]`); if (o) o.textContent = E.plan.name; });
@@ -7950,6 +7961,10 @@ function bind() {
   $('aeUse').addEventListener('click', () => {
     S().set.auto = 'plan:' + E.id; S().save(); UIx().autoSelects(); renderHead();
     note('Trận “Đấu trận” của bạn sẽ chạy chương trình này trong AUTO (đổi lại ở màn hình Đấu trận).'); AU.sfxs.ui();
+  });
+  $('aeAssignBtn').addEventListener('click', () => {
+    const k = $('aeAssign').value, who = { partnerAuto: 'bot đồng đội', opp1Auto: 'đối thủ 1', opp2Auto: 'đối thủ 2', dBotAuto: 'các bot ở chế độ 2 người' }[k];
+    S().set[k] = 'plan:' + E.id; S().save(); UIx().autoSelects(); note(`Đã gán “${E.plan.name}” cho ${who}. Chọn lại ở màn hình Đấu trận nếu muốn đổi.`); AU.sfxs.ui();
   });
   $('aeTry').addEventListener('click', () => { S().set.auto = 'plan:' + E.id; S().save(); stopRun(); E.frozen = null; S().start('match'); });
   window.addEventListener('resize', () => { if (UIx().current === 'auto') { if (E.frozen && !E.run) drawMapFrozen(); else drawMap(); } });
@@ -8620,7 +8635,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 // ------------------------------------------------------------------ settings (per-viewer, browser storage)
 const DEF = {
   v: 2, mig: 3,
-  robot: 'turret', slot: 'R0', start: 'audience', auto: 'full', partnerAuto: 'full', skill: 'normal', partner: 'auto', opp1: 'auto', opp2: 'auto',
+  robot: 'turret', slot: 'R0', start: 'audience', auto: 'full', partnerAuto: 'full', opp1Auto: 'full', opp2Auto: 'full', dBotAuto: 'full', skill: 'normal', partner: 'auto', opp1: 'auto', opp2: 'auto',
   team: '2026', hp: 'auto', fouls: 'on', tip: 8,
   pRobot: 'turret', pSlot: 'R0', pTimer: 'free', pFlowers: 'open', pDefender: 'none', pHp: 'auto', pTip: 8,
   dMode: 'versus', dDev1: 'gp0', dDev2: 'gp1', dRobot1: 'turret', dRobot2: 'speed', dSkill: 'normal', dAuto: 'full', dAuto2: 'full',
@@ -8777,8 +8792,9 @@ S.buildMatch = function (kind) {
     robots.push({ alliance: al, slot: sl, spec: me, team: (st.team || '2026').slice(0, 5), start: st.start, human: true, skill: 'normal', routine: mine.routine, plan: mine.plan });
     robots.push({ alliance: al, slot: 1 - sl, spec: pickRobot(st.partner, partnerFor(me)), team: '8081', start: START_PAIR[st.start] || 'alliance', skill: st.skill, routine: pa.routine, plan: pa.plan });
     const oa0 = OPP_AUTO[st.skill] || OPP_AUTO.normal;
-    robots.push({ alliance: oa, slot: 0, spec: pickRobot(st.opp1, oa0[0]), team: '3141', start: 'audience', skill: st.skill });
-    robots.push({ alliance: oa, slot: 1, spec: pickRobot(st.opp2, oa0[1]), team: '5927', start: 'alliance', skill: st.skill });
+    const o1 = S.autoChoice(st.opp1Auto === 'manual' ? 'full' : st.opp1Auto), o2 = S.autoChoice(st.opp2Auto === 'manual' ? 'full' : st.opp2Auto);
+    robots.push({ alliance: oa, slot: 0, spec: pickRobot(st.opp1, oa0[0]), team: '3141', start: 'audience', skill: st.skill, routine: o1.routine, plan: o1.plan });
+    robots.push({ alliance: oa, slot: 1, spec: pickRobot(st.opp2, oa0[1]), team: '5927', start: 'alliance', skill: st.skill, routine: o2.routine, plan: o2.plan });
     humans.push({ ri: 0, ctl: [{ dev: 'kbA+gp0+gp1', role: 'both' }], player: 1 });
     opts.hpManual[al] = st.hp === 'manual';
   } else if (kind === 'practice') {
@@ -8792,21 +8808,22 @@ S.buildMatch = function (kind) {
     const r1 = pickRobot(st.dRobot1, 'turret'), r2 = pickRobot(st.dRobot2, 'speed');
     const a1 = S.autoChoice(st.dAuto), a2 = S.autoChoice(m === 'codrive' ? st.dAuto : st.dAuto2);
     const A1 = { routine: a1.routine, plan: a1.plan }, A2 = { routine: a2.routine, plan: a2.plan };
+    const BA = S.autoChoice(st.dBotAuto === 'manual' ? 'full' : st.dBotAuto);
     if (m === 'versus') {
       robots.push(Object.assign({ alliance: 'R', slot: 0, spec: r1, team: '1111', start: 'audience', human: true }, A1));
       robots.push(Object.assign({ alliance: 'B', slot: 0, spec: r2, team: '2222', start: 'audience', human: true }, A2));
-      if (bot) { robots.push({ alliance: 'R', slot: 1, spec: BB.presetSpec(partnerFor(r1)), team: '8081', start: 'alliance', skill: st.dSkill }); robots.push({ alliance: 'B', slot: 1, spec: BB.presetSpec(partnerFor(r2)), team: '5927', start: 'alliance', skill: st.dSkill }); }
+      if (bot) { robots.push({ alliance: 'R', slot: 1, spec: BB.presetSpec(partnerFor(r1)), team: '8081', start: 'alliance', skill: st.dSkill, routine: BA.routine, plan: BA.plan }); robots.push({ alliance: 'B', slot: 1, spec: BB.presetSpec(partnerFor(r2)), team: '5927', start: 'alliance', skill: st.dSkill, routine: BA.routine, plan: BA.plan }); }
       humans.push({ ri: 0, ctl: [{ dev: st.dDev1, role: 'both' }], player: 1 }, { ri: 1, ctl: [{ dev: st.dDev2, role: 'both' }], player: 2 });
     } else if (m === 'coop') {
       robots.push(Object.assign({ alliance: 'R', slot: 0, spec: r1, team: '1111', start: 'audience', human: true }, A1));
       robots.push(Object.assign({ alliance: 'R', slot: 1, spec: r2, team: '2222', start: 'alliance', human: true }, A2));
-      if (bot) { const o = OPP_AUTO[st.dSkill]; robots.push({ alliance: 'B', slot: 0, spec: BB.presetSpec(o[0]), team: '3141', start: 'audience', skill: st.dSkill }); robots.push({ alliance: 'B', slot: 1, spec: BB.presetSpec(o[1]), team: '5927', start: 'alliance', skill: st.dSkill }); }
+      if (bot) { const o = OPP_AUTO[st.dSkill]; robots.push({ alliance: 'B', slot: 0, spec: BB.presetSpec(o[0]), team: '3141', start: 'audience', skill: st.dSkill, routine: BA.routine, plan: BA.plan }); robots.push({ alliance: 'B', slot: 1, spec: BB.presetSpec(o[1]), team: '5927', start: 'alliance', skill: st.dSkill, routine: BA.routine, plan: BA.plan }); }
       humans.push({ ri: 0, ctl: [{ dev: st.dDev1, role: 'both' }], player: 1 }, { ri: 1, ctl: [{ dev: st.dDev2, role: 'both' }], player: 2 });
     } else {
       robots.push(Object.assign({ alliance: 'R', slot: 0, spec: r1, team: '1111', start: 'audience', human: true }, A1));
       if (bot) {
-        robots.push({ alliance: 'R', slot: 1, spec: BB.presetSpec(partnerFor(r1)), team: '8081', start: 'alliance', skill: st.dSkill });
-        const o = OPP_AUTO[st.dSkill]; robots.push({ alliance: 'B', slot: 0, spec: BB.presetSpec(o[0]), team: '3141', start: 'audience', skill: st.dSkill }); robots.push({ alliance: 'B', slot: 1, spec: BB.presetSpec(o[1]), team: '5927', start: 'alliance', skill: st.dSkill });
+        robots.push({ alliance: 'R', slot: 1, spec: BB.presetSpec(partnerFor(r1)), team: '8081', start: 'alliance', skill: st.dSkill, routine: BA.routine, plan: BA.plan });
+        const o = OPP_AUTO[st.dSkill]; robots.push({ alliance: 'B', slot: 0, spec: BB.presetSpec(o[0]), team: '3141', start: 'audience', skill: st.dSkill, routine: BA.routine, plan: BA.plan }); robots.push({ alliance: 'B', slot: 1, spec: BB.presetSpec(o[1]), team: '5927', start: 'alliance', skill: st.dSkill, routine: BA.routine, plan: BA.plan });
       }
       humans.push({ ri: 0, ctl: [{ dev: st.dDev1, role: 'drive' }, { dev: st.dDev2, role: 'op' }], player: 1, codrive: true });
     }
