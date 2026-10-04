@@ -8,8 +8,8 @@
 
 <div align="center">
 
-<a href="https://thunderclaw.vercel.app">
-  <strong>OPEN THUNDERCLAW WEB</strong>
+<a href="https://simulator-ivory-mu.vercel.app/">
+  <strong>OPEN SIMULATOR TEST</strong>
 </a>
 
 </div>
