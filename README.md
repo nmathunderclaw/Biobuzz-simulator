@@ -9,7 +9,7 @@
 <div align="center">
 
 <a href="https://thunderclaw.vercel.app">
-  <strong>OPEN BIOBUZZ SIMULATOR</strong>
+  <strong>OPEN THUNDERCLAW WEB</strong>
 </a>
 
 </div>
