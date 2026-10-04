@@ -1,55 +1,71 @@
+<div align="center">
+
+<img src="assets/logo.png" alt="NMA Thunder Claw logo" width="260"/>
+
+<img src="assets/banner.svg" alt="NMA THUNDER CLAW - FTC Team 32807" width="720"/>
+
+</div>
+
 # BIOBUZZ Sim 3D (FTC 2026–2027)
 
-Mô phỏng 3D trận FTC BIOBUZZ: sân dựng từ file CAD chính thức của FIRST, vật lý bóng/HIVE 300 Hz, robot tự thiết kế, tự lập trình chiến thuật AUTO, AprilTag auto-aim, bot AI, trọng tài tự động, replay + phân tích trận, đồ họa bloom, chơi online hai máy.
+A 3D simulation of the FTC BIOBUZZ match: the field is built from FIRST's official CAD file, with 300 Hz ball/HIVE physics, custom-designed robots, programmable AUTO strategies, AprilTag auto-aim, AI bots, an automatic referee, replay + match analysis, bloom graphics, and two-player online play.
 
-## Chạy ngay
-Mở `biobuzz-sim.html` bằng Chrome/Edge (cần mạng để tải three.js r128 từ cdnjs và font Google). Chơi online chỉ chạy khi trang mở trong Claude (tính năng phòng `room` của artifact).
+## Quick start
+Open `biobuzz-sim.html` in Chrome/Edge (an internet connection is required to load three.js r128 from cdnjs and Google Fonts). Online play only works when the page is opened inside Claude (it uses the artifact `room` feature).
 
-## Điều khiển
-- Mặc định robot lái bằng **tay cầm** (Xbox, PlayStation, Logitech F310 chế độ X). Bàn phím vẫn dùng cho phím tắt (C đổi góc nhìn, Esc tạm dừng, Delete xếp lại sân khi luyện tập…).
-- Muốn lái bằng bàn phím: Cài đặt → Điều khiển → “Lái robot bằng bàn phím”. Phím được tăng dần như cần analog, xoay ở 60% công suất (chỉnh được). Tắt bộ gõ tiếng Việt (Unikey/EVKey) khi lái bằng phím, nếu không W A S D bị nuốt; trang tự nhắc khi phát hiện.
-- Góc camera: kéo chuột trái để xoay, Shift + kéo hoặc chuột phải để dời, lăn để thu phóng, nhấp đúp để đặt lại; mỗi góc nhìn nhớ riêng. Tay cầm: tạm dừng → “Chỉnh góc camera này”.
+## Controls
+- By default the robot is driven with a **gamepad** (Xbox, PlayStation, Logitech F310 in X mode). The keyboard is still used for shortcuts (C switches the view, Esc pauses, Delete resets the field in practice mode, etc.).
+- To drive with the keyboard: Settings → Controls → "Drive robot with keyboard". Keys ramp up gradually like an analog stick, and turning runs at 60% power (adjustable). Turn off your Vietnamese input method (Unikey/EVKey) when driving with the keyboard, otherwise W A S D get swallowed; the page shows a reminder when it detects one.
+- Camera: left-drag to rotate, Shift + drag or right-drag to pan, scroll to zoom, double-click to reset; each view remembers its own camera. Gamepad: pause → "Adjust this camera".
 
-## Chiến thuật AUTO
-Menu **Chiến thuật AUTO**: vẽ chương trình 30 giây trên sân nhìn từ khu lái ĐỎ (bên XANH tự xoay 180°). Các bước: Đi tới, Bắn (tại chỗ / tự tìm chỗ), Nhặt bóng trong vòng tròn, Xoay, Chờ, Chờ tới giây, PARK. “Chạy thử” chạy chương trình bằng chính engine (một robot trên sân) và ghi kết quả từng bước; “Bản đồ bắn” tô chỗ bắn đứng yên vào được. Chọn chương trình cho mình và cho bot đồng đội ở màn hình Đấu trận / Hai người / Chơi online; chia sẻ bằng mã `BBA1.…`. Mô hình và bộ chạy chương trình nằm trong `ai.js` (`AI.PLAN`, `runPlan`), giao diện trong `autoed.js`.
+## AUTO strategy
+The **AUTO Strategy** menu lets you draw a 30-second program on the field, viewed from the RED driver station (the BLUE side is automatically rotated 180°). Available steps: Go to, Shoot (in place / find a spot), Pick up balls inside a circle, Turn, Wait, Wait until second, PARK. "Test run" runs the program with the real engine (a single robot on the field) and logs the result of each step; "Shot map" highlights the standing positions from which shots score. Choose a program for yourself and for your bot teammate on the Match / Two players / Online screens; share programs with a `BBA1.…` code. The model and program runner live in `ai.js` (`AI.PLAN`, `runPlan`), and the UI is in `autoed.js`.
 
-## Build lại từ mã nguồn
+## Building from source
 ```
-node build.mjs        # ghép src/ thành dist/biobuzz-sim.html
+node build.mjs        # bundles src/ into dist/biobuzz-sim.html
 ```
-Thứ tự ghép: engine → ai → render → fx → input → audio → replay → hud → ui → autoed → net → app. `src/fieldcad.b64` (mô hình sân) được nhúng vào trang dưới dạng khối văn bản `#field-cad`; render.js giải nén nó lúc khởi động (DecompressionStream). Nếu trình duyệt không giải được, trang tự dùng sân dựng tay.
+Bundle order: engine → ai → render → fx → input → audio → replay → hud → ui → autoed → net → app. `src/fieldcad.b64` (the field model) is embedded in the page as a text block `#field-cad`; render.js decompresses it at startup (DecompressionStream). If the browser cannot decompress it, the page falls back to a hand-built field.
 
-## Sân từ file CAD chính thức
-`tools/fieldcad/field-cad-step.zip` là file **Field CAD (STEP, .ZIP) v26-27.2** (15/9/2026) tải từ trang Playing Field Resources của FIRST: https://ftc-resources.firstinspires.org/ftc/field
+## Field from the official CAD file
+`tools/fieldcad/field-cad-step.zip` is the **Field CAD (STEP, .ZIP) v26-27.2** file (9/15/2026) downloaded from FIRST's Playing Field Resources page: https://ftc-resources.firstinspires.org/ftc/field
 
-Tạo lại `src/fieldcad.b64` (cần Python 3 + `pip install cadquery-ocp pymeshlab fast-simplification numpy scipy`; pymeshlab cần thư viện hệ thống `libopengl0`):
+To regenerate `src/fieldcad.b64` (requires Python 3 + `pip install cadquery-ocp pymeshlab fast-simplification numpy scipy`; pymeshlab needs the system library `libopengl0`):
 ```
 cd tools/fieldcad
-unzip field-cad-step.zip                 # ra field-cad-step.step (35 MB, AP242)
-python3 extract.py field-cad-step.step   # đọc STEP bằng OpenCASCADE, chia lưới từng chi tiết -> proto.pkl
-python3 build_asset.py                   # bỏ ốc vít, giảm lưới chi tiết đúc, tách 2 HIVE về khung nằm ngang, nén -> src/fieldcad.b64
+unzip field-cad-step.zip                 # produces field-cad-step.step (35 MB, AP242)
+python3 extract.py field-cad-step.step   # reads the STEP with OpenCASCADE, meshes each part -> proto.pkl
+python3 build_asset.py                   # removes screws, decimates cast parts, lays both HIVEs flat, compresses -> src/fieldcad.b64
 ```
-(đường dẫn trong hai script đang trỏ tới `/home/claude/...`; sửa lại cho máy của bạn.)
+(The paths in both scripts currently point to `/home/claude/...`; edit them for your machine.)
 
-Hệ tọa độ: CAD là inch, trục Y hướng lên, +X về phía XANH, +Z về phía khán giả, trùng với khung three.js của render.js (`three.x = sim.x`, `three.y = sim.z`, `three.z = -sim.y`). Các số đo va chạm trong engine.js (tường, CELL, FLOWER, khung, băng dính, AprilTag) được đối chiếu với CAD và ghi chú ngay tại chỗ khai báo.
+Coordinate system: the CAD is in inches, Y-up, +X toward BLUE, +Z toward the audience, matching the three.js frame in render.js (`three.x = sim.x`, `three.y = sim.z`, `three.z = -sim.y`). The collision dimensions in engine.js (walls, CELL, FLOWER, frame, tape, AprilTag) were checked against the CAD and are annotated where they are declared.
 
-## Các file trong src/
-| File | Nội dung |
+## Files in src/
+| File | Contents |
 |---|---|
-| engine.js | Vật lý (bước 1/300 s), bóng Magnus, HIVE bập bênh, FLOWER (vòng giữa giữ NECTAR), robot từ spec, mô-tơ/pin/flywheel, AprilTag + odometry, trọng tài, tính điểm |
-| ai.js | Bot: A* tìm đường, vai trò (TIP, FLOWER, phòng thủ), PARK, tránh G402/G421; chương trình AUTO của đội (`AI.PLAN`: chuẩn hóa, mã chia sẻ, kiểm tra G304/G402, chạy từng bước) |
-| render.js | three.js: sân CAD (hoặc sân dựng tay dự phòng), robot dựng từ spec, nội suy giữa hai bước vật lý, camera chỉnh được theo từng góc nhìn, tự giảm độ phân giải, hậu kỳ "Đẹp nhất" (MSAA + bloom) |
-| fieldcad.b64 | Mô hình sân CAD đã nén (166 nghìn tam giác, 36 đường ghép thảm) |
-| fx.js | Tia lửa khi vào CELL, bùng nổ khi TIP, vệt bóng bay, pháo giấy, flash khán đài |
-| input.js | Tay cầm, bàn phím 2 nửa (tắt lái mặc định, tăng dần, nhận biết bộ gõ tiếng Việt), gán phím |
-| audio.js | Âm thanh sân, tiếng robot |
-| replay.js | Ghi trận 30 khung/s, trình xem replay, biểu đồ diễn biến, bản đồ sân |
-| hud.js | Bảng điểm, bảng robot, camera tag, bảng kết quả |
-| ui.js | Menu, xưởng robot, cài đặt |
-| autoed.js | Trình soạn chiến thuật AUTO: bản đồ sân, danh sách bước, chạy thử, bản đồ bắn, mã chia sẻ |
-| net.js | Chơi online qua phòng của artifact (host chạy vật lý, khách gửi tay lái) |
-| app.js | Vòng lặp chính, điều khiển người chơi, thiết lập trận |
-| markup.html, style.css | Giao diện |
+| engine.js | Physics (1/300 s step), Magnus-effect balls, HIVE see-saw, FLOWER (center ring holding NECTAR), robot from spec, motors/battery/flywheel, AprilTag + odometry, referee, scoring |
+| ai.js | Bot: A* pathfinding, roles (TIP, FLOWER, defense), PARK, G402/G421 avoidance; team AUTO programs (`AI.PLAN`: normalization, share code, G304/G402 checks, step-by-step runner) |
+| render.js | three.js: CAD field (or hand-built fallback), robot built from spec, interpolation between physics steps, per-view adjustable camera, automatic resolution scaling, "Best quality" post-processing (MSAA + bloom) |
+| fieldcad.b64 | Compressed CAD field model (166k triangles, 36 carpet seams) |
+| fx.js | Sparks when entering the CELL, TIP burst, ball trails, confetti, stand flashes |
+| input.js | Gamepad, two-half keyboard (default driving off, ramp-up, Vietnamese IME detection), key binding |
+| audio.js | Field sounds, robot sounds |
+| replay.js | 30 fps match recording, replay viewer, match timeline chart, field map |
+| hud.js | Scoreboard, robot panel, tag camera, results screen |
+| ui.js | Menus, robot workshop, settings |
+| autoed.js | AUTO strategy editor: field map, step list, test run, shot map, share code |
+| net.js | Online play via the artifact room (host runs physics, guest sends joystick input) |
+| app.js | Main loop, player control, match setup |
+| markup.html, style.css | User interface |
 
-## Kiểm thử (tùy chọn)
-`test/*.mjs` chạy bằng Node (`node test/batch.mjs 6`, `node test/plan.mjs`, `node test/flower2.mjs`, `node test/tip.mjs`), `test/*.py` cần Playwright + Chromium (`python3 test/auto.py` kiểm tra trình soạn AUTO, camera và điều khiển; `python3 test/cad.py high` chụp sân CAD từ nhiều góc).
+## Testing (optional)
+`test/*.mjs` run with Node (`node test/batch.mjs 6`, `node test/plan.mjs`, `node test/flower2.mjs`, `node test/tip.mjs`); `test/*.py` need Playwright + Chromium (`python3 test/auto.py` tests the AUTO editor, camera and controls; `python3 test/cad.py high` captures the CAD field from multiple angles).
+
+---
+
+<div align="center">
+
+**NMA Thunder Claw · FTC Team 32807** · Da Nang, Vietnam
+
+</div>
