@@ -7,9 +7,6 @@
 </p>
 
 <div align="center">
-
-
-
 <br><br>
 
 <strong>NMA Thunder Claw · FTC Team 32807</strong>
