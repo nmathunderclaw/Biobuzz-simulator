@@ -8,9 +8,7 @@
 
 <div align="center">
 
-<a href="https://simulator-ivory-mu.vercel.app">
-  <strong>🌐 OPEN BIOBUZZ SIMULATOR</strong>
-</a>
+
 
 <br><br>
 
